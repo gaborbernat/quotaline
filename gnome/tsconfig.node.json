@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "erasableSyntaxOnly": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "extension/tests/*.test.ts",
+    "extension/tests/support/coverage*.ts",
+    "extension/tests/support/globals.d.ts",
+    "extension/tests/support/node.ts",
+    "extension/tests/support/state.ts"
+  ],
+  "exclude": []
+}

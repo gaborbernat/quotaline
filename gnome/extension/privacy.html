@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quotaline for GNOME — Privacy</title>
+<style>
+  body { max-width: 46rem; margin: 3rem auto; padding: 0 1.5rem; font: 1rem/1.55 system-ui; color: #242424; background: #fff; }
+  h1, h2 { line-height: 1.2; }
+  code { overflow-wrap: anywhere; }
+  @media (prefers-color-scheme: dark) { body { color: #eee; background: #202020; } }
+</style>
+<h1>Privacy</h1>
+<p>Quotaline for GNOME reads credentials already stored by supported coding tools. It does not ask for passwords,
+create an account, send telemetry, or upload crash reports. Quota requests go directly to the providers.</p>
+<h2>Local data</h2>
+<p>Settings are stored in <code>~/.config/quotaline/</code>, history in
+<code>~/.local/share/quotaline/</code>, and the last snapshot in
+<code>~/.cache/quotaline/</code>. The service restricts these files to the current user. History retention,
+CSV export and clearing are controlled from Settings. Clearing history does not sign out provider clients.</p>
+<p>The optional <code>usage.json</code> export contains provider IDs, plan names, times and quota rows. It excludes
+credentials and account identities. Hiding account details removes them from the panel state and visible cards; it does
+not erase cached source data. Exported CSV files remain where you save them.</p>
+<h2>Credentials and diagnostics</h2>
+<p>Credentials stay in the Rust service process and are excluded from panel state, snapshots, history and diagnostics.
+Token refresh is off by default. If enabled, the service may save refreshed Claude, Codex or Gemini credentials to
+their existing file or Secret Service item. Antigravity keeps refreshed tokens in memory; Cursor and Copilot credentials
+remain read-only. The Log section stores bounded service events in owner-only local files. Its view excludes entries
+older than seven days. You can filter and copy entries or clear the log files. Service output is also available with
+<code>journalctl --user -u quotaline-gnome</code>. Inspect logs and diagnostics before sharing them.</p>
+</html>

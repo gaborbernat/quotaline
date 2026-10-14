@@ -1,0 +1,14 @@
+[workspace]
+members = ["crates/providers/codex", "crates/providers/claude", "crates/providers/antigravity", "crates/providers/gemini", "crates/providers/cursor", "crates/providers/copilot", "crates/refresh", "crates/data/export", "crates/accounts/setup", "crates/presentation/status-bar", "crates/demo", "crates/presentation/notifications", "crates/settings", "crates/presentation/quota", "crates/data/analytics", "crates/http", "crates/accounts/credentials", "crates/logging", "crates/catalog", "crates/presentation/text", "crates/accounts/credential-sources", "crates/data/history", "crates/data/storage", "gnome", "gnome/adapter", "macos/adapter", "macos/platform"]
+default-members = ["crates/providers/codex", "crates/providers/claude", "crates/providers/antigravity", "crates/providers/gemini", "crates/providers/cursor", "crates/providers/copilot", "crates/refresh", "crates/data/export", "crates/accounts/setup", "crates/presentation/status-bar", "crates/demo", "crates/presentation/notifications", "crates/settings", "crates/presentation/quota", "crates/data/analytics", "crates/http", "crates/accounts/credentials", "crates/logging", "crates/catalog", "crates/presentation/text", "crates/accounts/credential-sources", "crates/data/history", "crates/data/storage", "gnome", "gnome/adapter"]
+resolver = "3"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+
+# SQLite is C code that tests never instrument; unoptimized it makes history queries slow enough to race the Shell.
+[profile.dev.package.libsqlite3-sys]
+opt-level = 3

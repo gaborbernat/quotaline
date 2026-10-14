@@ -1,0 +1,11 @@
+[package]
+name = "quotaline-demo"
+version = "0.1.8"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+quotaline-analytics = { version = "0.1.8", path = "../data/analytics" }
+quotaline-catalog = { version = "0.1.8", path = "../catalog" }
+quotaline-quota = { version = "0.1.8", path = "../presentation/quota" }

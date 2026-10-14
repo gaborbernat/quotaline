@@ -1,0 +1,120 @@
+exclude: ^(website/public|website/resources|dist|macos/src/QuotalineRust)/
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=4096"]
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+      - id: detect-private-key
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: check-symlinks
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        language: system
+        entry: cargo fmt --all --check
+        types: [rust]
+        pass_filenames: false
+      - id: cargo-clippy
+        name: cargo clippy
+        language: system
+        # The GNOME crates read /proc and the session bus, so a Mac checks every crate but those.
+        entry: bash -c 'cargo clippy --locked --workspace --all-targets $([ "$(uname)" = Darwin ] && echo --exclude quotaline-gnome --exclude quotaline-gnome-adapter) -- -D warnings'
+        types: [rust]
+        pass_filenames: false
+  - repo: https://github.com/hukkin/mdformat
+    rev: 1.0.0
+    hooks:
+      - id: mdformat
+        additional_dependencies: [mdformat-gfm==1.0.0, mdformat-hugo==0.3]
+        args: [--wrap, "120", --check]
+        files: ^(README\.md|website/content/.*\.md)$
+  # shellcheck-py rather than the upstream hook: pre-commit.ci has no Docker
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1-1
+    hooks:
+      - id: shellcheck
+        # Scripts source each other by paths relative to macos/.
+        args: ["--external-sources", "--source-path=SCRIPTDIR/.."]
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.14.1-1
+    hooks:
+      - id: shfmt
+        args: ["--indent", "2", "--case-indent", "--space-redirects", "--write"]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.1
+    hooks:
+      - id: ruff-format
+      - id: ruff-check
+        args: ["--fix"]
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.51.1
+    hooks:
+      - id: typos
+        entry: typos
+        args: [--force-exclude]
+        exclude: (^|/)[Ff]ixtures/.*\.(json|txt|plist)$|^gnome/extension/src/shared-copy\.ts$|(^|/)(Cargo|mise|package)\.lock$|package-lock\.json$
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.31.1
+    hooks:
+      - id: zizmor
+  - repo: local
+    hooks:
+      - id: biome
+        name: biome
+        entry: mise exec -- just biome
+        language: system
+        files: ^(biome\.json|gnome/(package\.json|tsconfig(\.node)?\.json|eslint\.config\.mjs|extension/.*\.(ts|js|mjs|json))|website/assets/.*\.(css|js))$
+      - id: eslint
+        name: eslint (TypeScript and GJS)
+        entry: mise exec -- just eslint
+        language: system
+        files: ^gnome/(extension/.*\.(ts|js|mjs)|eslint\.config\.mjs|tsconfig(\.node)?\.json|package(-lock)?\.json)$
+        pass_filenames: false
+      - id: tsc
+        name: tsc
+        entry: mise exec -- just typecheck-extension
+        language: system
+        files: ^gnome/(extension/.*\.ts|tsconfig(\.node)?\.json|package(-lock)?\.json)$
+        pass_filenames: false
+      - id: jactionlint
+        name: jactionlint
+        entry: jactionlint
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
+      - id: swiftlint
+        name: swiftlint
+        entry: mise exec -- swiftlint lint --strict --quiet --force-exclude --config macos/.swiftlint.yml
+        language: system
+        types: [swift]
+      - id: swift-format
+        name: swift-format
+        # The subcommand rather than the binary: Xcode ships swift-format inside the toolchain, off PATH.
+        entry: swift format lint --strict
+        language: system
+        types: [swift]
+      # plistlib rather than plutil, and just from PyPI, so these run on Linux as well as a Mac
+      - id: plists
+        name: property lists parse
+        entry: python -c "import plistlib,sys;[plistlib.loads(open(f,'rb').read()) for f in sys.argv[1:]]"
+        language: python
+        files: \.(plist|entitlements|xcprivacy)$
+      - id: just-format
+        name: justfile formatting
+        entry: just --unstable --fmt --check --justfile
+        language: python
+        additional_dependencies: [rust-just==1.59.0]
+        files: ^justfile$
+        pass_filenames: false
+        args: [justfile]

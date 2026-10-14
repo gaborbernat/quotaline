@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quotaline for GNOME — Provider setup</title>
+<style>
+  body { max-width: 46rem; margin: 3rem auto; padding: 0 1.5rem; font: 1rem/1.55 system-ui; color: #242424; background: #fff; }
+  h1, h2 { line-height: 1.2; }
+  code { overflow-wrap: anywhere; }
+  @media (prefers-color-scheme: dark) { body { color: #eee; background: #202020; } }
+</style>
+<h1>Provider setup</h1>
+<p>Sign in with the provider's client, enable the provider in Quotaline Settings, then select its refresh button.
+The app reads existing local credentials and does not ask for passwords. Connection details in Settings shows the
+credential source currently in use.</p>
+<h2 id="claude">Claude</h2>
+<p>Run <code>claude auth login</code> in a terminal. The service reads <code>~/.claude/.credentials.json</code>, or the same file under
+<code>CLAUDE_CONFIG_DIR</code> when that variable is set. Local transcript totals work without online credentials.</p>
+<h2 id="codex">Codex</h2>
+<p>Run <code>codex login</code> in a terminal. The service checks its Secret Service item and <code>~/.codex/auth.json</code>, using
+<code>CODEX_HOME</code> when set. Recent CLI rollout files can supply a stale quota reading while online access fails.</p>
+<h2 id="gemini">Gemini CLI</h2>
+<p>Run <code>gemini</code> in a terminal and sign in with Google. The service reads <code>~/.gemini/oauth_creds.json</code>, using
+<code>GEMINI_CLI_HOME</code> when set. When <code>GEMINI_FORCE_ENCRYPTED_FILE_STORAGE=true</code> is set for both Gemini CLI
+and the service, it reads the Gemini Secret Service item first.</p>
+<h2 id="antigravity">Antigravity</h2>
+<p>Sign in through the Antigravity app. The service first checks the same-user local language server. Its cloud
+fallback can read the Antigravity Secret Service item, the CLI credential file under
+<code>~/.gemini/antigravity-cli/</code>, <code>~/.config/Antigravity/auth.json</code>, or
+<code>ANTIGRAVITY_AUTH_FILE</code>.</p>
+<h2 id="cursor">Cursor</h2>
+<p>Sign in through Cursor or run <code>cursor-agent login</code>. The service reads the app session from Cursor's XDG <code>state.vscdb</code> first, then
+<code>~/.cursor/auth.json</code>. It asks for a new sign-in when a session is within two minutes of expiry.</p>
+<h2 id="copilot">GitHub Copilot</h2>
+<p>Run <code>copilot login</code> or sign in through a supported Copilot client. The service can read a token from the environment, the
+<code>copilot-cli</code> Secret Service item, <code>~/.copilot/config.json</code>, or XDG editor credentials. It does
+not change those credentials.</p>
+</html>

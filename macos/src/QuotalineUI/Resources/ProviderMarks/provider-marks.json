@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "retrieved": "2026-09-18",
+  "assets": [
+    {
+      "provider": "claude",
+      "brand": "Claude",
+      "approvalState": "mit-artwork-brand-permission-not-granted",
+      "sourcePage": "https://www.anthropic.com/legal/trademark-guidelines",
+      "sourceArchive": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.95.0.tgz",
+      "sourceArchiveSHA256": "3b8a6e03df4ba6f882c759dbb0caf5fa2ce490b0a19fff82457adf39770a7ba6",
+      "terms": "https://github.com/lobehub/lobe-icons/blob/master/LICENSE",
+      "variants": [
+        {
+          "appearance": "light",
+          "resource": "claude-color.svg",
+          "archiveMember": "package/icons/claude-color.svg",
+          "sha256": "d4366130584b1027bbc376e3c06a48500d6e862403a69556726d7722610e5561"
+        },
+        {
+          "appearance": "dark",
+          "resource": "claude-color.svg",
+          "archiveMember": "package/icons/claude-color.svg",
+          "sha256": "d4366130584b1027bbc376e3c06a48500d6e862403a69556726d7722610e5561"
+        }
+      ],
+      "archiveMemberSHA256": "a3101f3047a119aa11825ad9369510f0c472428c8c52d420e31bc62db44a8364",
+      "modification": "A final newline was added; the drawing is unchanged."
+    },
+    {
+      "provider": "codex",
+      "brand": "OpenAI",
+      "approvalState": "mit-artwork-brand-permission-not-granted",
+      "sourcePage": "https://openai.com/brand/",
+      "sourceArchive": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.95.0.tgz",
+      "sourceArchiveSHA256": "3b8a6e03df4ba6f882c759dbb0caf5fa2ce490b0a19fff82457adf39770a7ba6",
+      "terms": "https://github.com/lobehub/lobe-icons/blob/master/LICENSE",
+      "variants": [
+        {
+          "appearance": "light",
+          "resource": "openai.svg",
+          "archiveMember": "package/icons/openai.svg",
+          "sha256": "802335af1ddb4e135468f689aabe7ac7798a3177c1b71bbd4549fc602e9264ed"
+        },
+        {
+          "appearance": "dark",
+          "resource": "openai.svg",
+          "archiveMember": "package/icons/openai.svg",
+          "sha256": "802335af1ddb4e135468f689aabe7ac7798a3177c1b71bbd4549fc602e9264ed"
+        }
+      ],
+      "archiveMemberSHA256": "a595df6b423920c67a7f8f73c063e4bfb72d415948097b6cac063a2366bb5186",
+      "modification": "A final newline was added; the drawing is unchanged."
+    },
+    {
+      "provider": "gemini",
+      "brand": "Google Gemini",
+      "approvalState": "mit-artwork-brand-permission-not-granted",
+      "sourcePage": "https://about.google/brand-resource-center/",
+      "sourceArchive": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.95.0.tgz",
+      "sourceArchiveSHA256": "3b8a6e03df4ba6f882c759dbb0caf5fa2ce490b0a19fff82457adf39770a7ba6",
+      "terms": "https://github.com/lobehub/lobe-icons/blob/master/LICENSE",
+      "variants": [
+        {
+          "appearance": "light",
+          "resource": "gemini-color.svg",
+          "archiveMember": "package/icons/gemini-color.svg",
+          "sha256": "daed9268a8d60e4677d45a51a9b9ddbb532e237453e1b5c0f9b175d775a93171"
+        },
+        {
+          "appearance": "dark",
+          "resource": "gemini-color.svg",
+          "archiveMember": "package/icons/gemini-color.svg",
+          "sha256": "daed9268a8d60e4677d45a51a9b9ddbb532e237453e1b5c0f9b175d775a93171"
+        }
+      ],
+      "modification": "Path data re-serialised with spaces between arc flags so CoreSVG can parse it, plus a final newline; the geometry is unchanged.",
+      "archiveMemberSHA256": "8ab0a9bafec11f7e69bcb9fc4ffd8f1bc927d1ddcbbb6ff36dee5ae8b5a9d602"
+    },
+    {
+      "provider": "antigravity",
+      "brand": "Google Antigravity",
+      "approvalState": "mit-artwork-brand-permission-not-granted",
+      "sourcePage": "https://antigravity.google/press",
+      "sourceArchive": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.95.0.tgz",
+      "sourceArchiveSHA256": "3b8a6e03df4ba6f882c759dbb0caf5fa2ce490b0a19fff82457adf39770a7ba6",
+      "terms": "https://github.com/lobehub/lobe-icons/blob/master/LICENSE",
+      "variants": [
+        {
+          "appearance": "light",
+          "resource": "antigravity.svg",
+          "archiveMember": "package/icons/antigravity.svg",
+          "sha256": "7a3c6e4d58aec1363624de8e29a6053899bd3489ed5889fc3b54aa7b780dadd9"
+        },
+        {
+          "appearance": "dark",
+          "resource": "antigravity.svg",
+          "archiveMember": "package/icons/antigravity.svg",
+          "sha256": "7a3c6e4d58aec1363624de8e29a6053899bd3489ed5889fc3b54aa7b780dadd9"
+        }
+      ],
+      "archiveMemberSHA256": "43f551fd125c17fb54c8c74eb461924fb97f32bb64ac89f73bb73852753a6461",
+      "modification": "A final newline was added; the drawing is unchanged."
+    },
+    {
+      "provider": "cursor",
+      "brand": "Cursor",
+      "approvalState": "mit-artwork-brand-permission-not-granted",
+      "sourcePage": "https://cursor.com/brand",
+      "sourceArchive": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.95.0.tgz",
+      "sourceArchiveSHA256": "3b8a6e03df4ba6f882c759dbb0caf5fa2ce490b0a19fff82457adf39770a7ba6",
+      "terms": "https://github.com/lobehub/lobe-icons/blob/master/LICENSE",
+      "variants": [
+        {
+          "appearance": "light",
+          "resource": "cursor.svg",
+          "archiveMember": "package/icons/cursor.svg",
+          "sha256": "c39ee63dd6a38a9856bd97a1dcb863023eed2b353b9709742e000c8ac90d91d7"
+        },
+        {
+          "appearance": "dark",
+          "resource": "cursor.svg",
+          "archiveMember": "package/icons/cursor.svg",
+          "sha256": "c39ee63dd6a38a9856bd97a1dcb863023eed2b353b9709742e000c8ac90d91d7"
+        }
+      ],
+      "archiveMemberSHA256": "0cb51bddf264ae108926fd554c063ef40fc1aac3c5c921ddb39ad184e4e5d0ef",
+      "modification": "A final newline was added; the drawing is unchanged."
+    },
+    {
+      "provider": "copilot",
+      "brand": "GitHub Copilot",
+      "approvalState": "mit-artwork-brand-permission-not-granted",
+      "sourcePage": "https://brand.github.com/foundations/logo",
+      "sourceArchive": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.95.0.tgz",
+      "sourceArchiveSHA256": "3b8a6e03df4ba6f882c759dbb0caf5fa2ce490b0a19fff82457adf39770a7ba6",
+      "terms": "https://github.com/lobehub/lobe-icons/blob/master/LICENSE",
+      "variants": [
+        {
+          "appearance": "light",
+          "resource": "githubcopilot.svg",
+          "archiveMember": "package/icons/githubcopilot.svg",
+          "sha256": "7b0a793b3ec1eb3d057bdbdb7b3a3eecb8cc6d57cd4e9e3604a23b3b73e3d25d"
+        },
+        {
+          "appearance": "dark",
+          "resource": "githubcopilot.svg",
+          "archiveMember": "package/icons/githubcopilot.svg",
+          "sha256": "7b0a793b3ec1eb3d057bdbdb7b3a3eecb8cc6d57cd4e9e3604a23b3b73e3d25d"
+        }
+      ],
+      "archiveMemberSHA256": "bbc7fddc13448236e5edea8c399d2072dc40aa5da5bca07f7a2f412405c500a3",
+      "modification": "A final newline was added; the drawing is unchanged."
+    }
+  ],
+  "fallbacks": []
+}

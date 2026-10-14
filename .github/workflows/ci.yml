@@ -1,0 +1,686 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # Pull requests and main run macOS 26 only, to fit the organization's five macOS runners; every runtime, package
+  # mode and distribution runs nightly.
+  schedule:
+    - cron: "23 2 * * *"
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    outputs:
+      crates: ${{ steps.paths.outputs.crates }}
+      gnome: ${{ steps.paths.outputs.gnome }}
+      macos: ${{ steps.paths.outputs.macos }}
+      shared: ${{ steps.paths.outputs.shared }}
+      docs: ${{ steps.paths.outputs.docs }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        if: github.event_name != 'schedule'
+        id: paths
+        with:
+          filters: |
+            crates:
+              - 'crates/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+            gnome:
+              - 'gnome/**'
+            macos:
+              - 'macos/**'
+            shared:
+              - 'Casks/**'
+              - '.config/**'
+              - '.github/workflows/**'
+              - '.gitignore'
+              - 'rust-toolchain.toml'
+              - '.rustfmt.toml'
+              - 'justfile'
+              - 'mise.toml'
+              - 'mise.lock'
+              - 'deny.toml'
+              - 'biome.json'
+              - '_typos.toml'
+              - '.pre-commit-config.yaml'
+            docs:
+              - 'README.md'
+              - 'website/**'
+              - '.readthedocs.yaml'
+
+  macos-runtimes:
+    needs: changes
+    if: ${{ needs.changes.outputs.crates == 'true' || needs.changes.outputs.macos == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name) }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    outputs:
+      ui: ${{ steps.matrix.outputs.ui }}
+      application: ${{ steps.matrix.outputs.application }}
+      package: ${{ steps.matrix.outputs.package }}
+      full: ${{ steps.matrix.outputs.full }}
+      ui-shards: ${{ steps.matrix.outputs.ui-shards }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: mkdir -p target/tmp
+      - run: TMPDIR="$PWD/target/tmp" bash macos/Scripts/test-ci-runtime-matrix.sh
+      - name: Select deployed runtimes
+        id: matrix
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FULL_MATRIX: ${{ contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name) && '1' || '0' }}
+        run: gh api repos/actions/runner-images/releases/tags/xcode-27-arm64%2F20260907.0173 | macos/Scripts/ci-runtime-matrix.sh
+
+  crates-coverage:
+    needs: changes
+    if: ${{ needs.changes.outputs.crates == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name) }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: --locked
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: crates-coverage
+          workspaces: . -> target/llvm-cov-target
+      - run: mise exec -- just coverage-crates
+        env:
+          TMB_TMPDIR: ${{ runner.temp }}/tmb
+          TMB_NEXTEST_PROFILE: ci-hosted
+
+  lint:
+    needs: changes
+    if: ${{ needs.changes.outputs.crates == 'true' || needs.changes.outputs.gnome == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name) }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: --locked
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: target/npm-cache
+          key: npm-${{ runner.os }}-${{ hashFiles('gnome/package-lock.json') }}
+      - run: mise exec -- just format-check
+      - run: mise exec -- just check
+      - run: mise exec -- just clippy
+      - run: mise exec -- just lint-extension
+
+  validate:
+    needs: changes
+    if: ${{ needs.changes.outputs.docs == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name) }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: --locked
+      - run: mise exec -- just lint-workflow
+      - run: mise exec -- just lint-docs
+      - run: mise exec -- just site
+      - run: mise exec -- just site-check
+      - run: |
+          test -s website/public/index.html
+          test -s website/public/llms.txt
+          test -s website/public/sitemap.xml
+          test -s website/public/robots.txt
+          test -s website/public/start/index.md
+          test -s website/public/reference/providers/index.md
+
+  dependencies:
+    needs: changes
+    if: ${{ needs.changes.outputs.crates == 'true' || needs.changes.outputs.gnome == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name) }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: --locked
+      - run: mise exec -- just lint-deps
+
+  build:
+    needs: [changes, crates-coverage]
+    if: ${{ always() && needs.crates-coverage.result != 'failure' && needs.crates-coverage.result != 'cancelled' && (needs.changes.outputs.crates == 'true' || needs.changes.outputs.gnome == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name)) }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install extension packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends gnome-shell unzip
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: --locked
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: target/npm-cache
+          key: npm-${{ runner.os }}-${{ hashFiles('gnome/package-lock.json') }}
+      - run: mise exec -- just release-package
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-candidate
+          path: |
+            target/quotaline-gnome-linux-x86_64.tar.gz
+            target/quotaline-gnome-linux-x86_64.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 1
+
+  rust-tests:
+    needs: [changes, build]
+    if: ${{ needs.changes.outputs.crates == 'true' || needs.changes.outputs.gnome == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name) }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: --locked
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: llvm-cov
+          workspaces: . -> target/llvm-cov-target
+      - run: mise exec -- just coverage-rust
+        env:
+          TMB_TMPDIR: ${{ runner.temp }}/tmb
+          TMB_NEXTEST_PROFILE: ci-hosted
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rust-report
+          path: target/rust-coverage-report.json
+          if-no-files-found: error
+          retention-days: 7
+
+  gnome-coverage:
+    needs: [changes, build]
+    if: ${{ needs.changes.outputs.crates == 'true' || needs.changes.outputs.gnome == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name) }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    env:
+      LIBGL_ALWAYS_SOFTWARE: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install GNOME Shell test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends gnome-shell gnome-keyring libsecret-tools dbus-bin dbus-daemon
+      - run: gnome-shell --version | grep '^GNOME Shell 50[.]'
+        shell: bash
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: --locked
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: llvm-cov
+          workspaces: . -> target/llvm-cov-target
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: target/npm-cache
+          key: npm-${{ runner.os }}-${{ hashFiles('gnome/package-lock.json') }}
+      - run: mise exec -- just coverage-gnome
+        env:
+          TMB_TMPDIR: ${{ runner.temp }}/tmb
+          TMB_NEXTEST_PROFILE: ci-hosted
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gnome-rust-report
+          path: target/rust-coverage-report.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Retain Shell renders and coverage reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: shell-evidence
+          path: |
+            target/shell-screenshots/
+            target/js-coverage/report.json
+          if-no-files-found: warn
+          retention-days: 7
+
+  rust-coverage:
+    needs: [rust-tests, gnome-coverage]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: --locked
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: rust-report
+          path: target/coverage-rust
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: gnome-rust-report
+          path: target/coverage-gnome
+      - run: mise exec -- just coverage-merge
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rust-coverage
+          path: target/rust-coverage-report.json
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    needs: [build, lint, validate, dependencies, rust-coverage]
+    if: ${{ always() && needs.build.result == 'success' && needs.lint.result == 'success' && (needs.validate.result == 'success' || needs.validate.result == 'skipped') && needs.dependencies.result == 'success' && needs.rust-coverage.result == 'success' }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: --locked
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-candidate
+          path: target
+      - run: mise exec -- just verify-release-package
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: quotaline-gnome-linux-x86_64
+          path: |
+            target/quotaline-gnome-linux-x86_64.tar.gz
+            target/quotaline-gnome-linux-x86_64.tar.gz.sha256
+          if-no-files-found: error
+
+  macos-ffi-coverage:
+    needs: [changes, crates-coverage]
+    if: ${{ always() && needs.crates-coverage.result != 'failure' && needs.crates-coverage.result != 'cancelled' && (needs.changes.outputs.crates == 'true' || needs.changes.outputs.macos == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name)) }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: --locked
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: macos-ffi-coverage
+          workspaces: . -> target/llvm-cov-target
+      - run: mise exec -- cargo fmt -p quotaline-macos-ffi --check
+      - run: mise exec -- cargo check --locked -p quotaline-macos-ffi --all-targets
+      - run: mise exec -- cargo clippy --locked -p quotaline-macos-ffi --all-targets -- -D warnings
+      - run: mise exec -- just coverage-macos-ffi
+        env:
+          TMB_TMPDIR: ${{ runner.temp }}/tmb
+          TMB_NEXTEST_PROFILE: ci-hosted
+
+  macos-build:
+    needs: [changes, lint, crates-coverage, macos-ffi-coverage]
+    if: ${{ always() && needs.macos-ffi-coverage.result == 'success' && (needs.lint.result == 'success' || needs.lint.result == 'skipped') && (needs.crates-coverage.result == 'success' || needs.crates-coverage.result == 'skipped') && (needs.changes.outputs.crates == 'true' || needs.changes.outputs.macos == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name)) }}
+    runs-on: macos-26
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: macos
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          working_directory: macos
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: macos-rust
+          workspaces: . -> target/macos-rust
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: target/uniffi-tools
+          key: uniffi-0.32.2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            macos/.build/checkouts
+            macos/.build/repositories
+            macos/.build/artifacts
+          key: macos-swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('macos/Package.swift') }}
+      - run: Scripts/select-xcode.sh
+      - run: just macos-build
+      - run: just macos-bridge-verify
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos-rust-bindings
+          path: |
+            macos/Generated/QuotalineRustFFI.xcframework
+            macos/src/QuotalineRust
+          if-no-files-found: error
+          retention-days: 1
+
+  macos-lint:
+    needs: [changes, macos-ffi-coverage]
+    if: ${{ needs.changes.outputs.crates == 'true' || needs.changes.outputs.macos == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name) }}
+    runs-on: macos-26
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: macos
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          working_directory: macos
+      - run: Scripts/select-xcode.sh
+      - run: just macos-lint-swift
+      - run: just --unstable --fmt --check --justfile ../justfile
+      - run: just macos-test-scripts
+
+  macos-coverage:
+    needs: [changes, macos-build]
+    if: ${{ needs.changes.outputs.crates == 'true' || needs.changes.outputs.macos == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name) }}
+    runs-on: macos-26
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: macos
+    env:
+      QUOTALINE_RENDER_CAPTURE_ONLY: 1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          working_directory: macos
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: macos-rust-bindings
+          path: macos
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            macos/.build/checkouts
+            macos/.build/repositories
+            macos/.build/artifacts
+          key: macos-swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('macos/Package.swift') }}
+      - run: Scripts/select-xcode.sh
+      - run: just macos-with-hang-samples 10 "$RUNNER_TEMP/hang" just macos-coverage-prepared
+        env:
+          QUOTALINE_RENDER_ARTIFACTS: ${{ runner.temp }}/settings-render
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ failure() }}
+        with:
+          name: macos-coverage-hang
+          path: ${{ runner.temp }}/hang
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: macos-rendered-package
+          path: ${{ runner.temp }}/settings-render
+          if-no-files-found: warn
+          retention-days: 7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: macos-swift-coverage
+          path: target/macos-swift-coverage.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  macos-package:
+    needs: [changes, macos-build, macos-runtimes]
+    if: ${{ needs.macos-runtimes.outputs.full == 'true' && (needs.changes.outputs.crates == 'true' || needs.changes.outputs.macos == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name)) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.macos-runtimes.outputs.package) }}
+    defaults:
+      run:
+        working-directory: macos
+    env:
+      QUOTALINE_RENDER_CAPTURE_ONLY: 1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          working_directory: macos
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: macos-rust-bindings
+          path: macos
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            macos/.build/checkouts
+            macos/.build/repositories
+            macos/.build/artifacts
+          key: macos-swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('macos/Package.swift') }}
+      - run: |
+          version="$(sw_vers -productVersion)"
+          [[ "${version%%.*}" == "$RUNTIME_MAJOR" ]]
+          Scripts/select-xcode.sh
+        env:
+          RUNTIME_MAJOR: ${{ matrix.runtime-major }}
+          MIN_XCODE_MAJOR: ${{ matrix.minimum-xcode }}
+          EXACT_XCODE_MAJOR: ${{ matrix.minimum-xcode }}
+      - run: just macos-test-prepared
+        if: matrix.mode == 'nonpresenting'
+        env:
+          QUOTALINE_RENDER_ARTIFACTS: ${{ runner.temp }}/settings-render
+      - run: just macos-with-hang-samples 10 "$RUNNER_TEMP/hang" just macos-test-native-prepared
+        if: matrix.mode == 'native'
+        env:
+          QUOTALINE_RENDER_ARTIFACTS: ${{ runner.temp }}/settings-render
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ failure() && matrix.mode == 'native' }}
+        with:
+          name: macos-package-hang-${{ matrix.runtime-major }}
+          path: ${{ runner.temp }}/hang
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: macos-package-${{ matrix.runtime-major }}-${{ matrix.mode }}
+          path: ${{ runner.temp }}/settings-render
+          if-no-files-found: warn
+          retention-days: 7
+
+  macos-rendered:
+    needs: [changes, macos-coverage]
+    if: ${{ !cancelled() && needs.macos-coverage.result != 'skipped' && (needs.changes.outputs.crates == 'true' || needs.changes.outputs.macos == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name)) }}
+    runs-on: macos-26
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: macos
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: macos-rendered-package
+          path: ${{ runner.temp }}/settings-render
+      - run: Scripts/install-ocr.sh
+        env:
+          TMPDIR: ${{ runner.temp }}
+      - run: |
+          Scripts/check-rendered-text.sh "$RUNNER_TEMP/settings-render" 16
+          image="$(find "$RUNNER_TEMP/settings-render" -name verifier-present.png -print -quit)"
+          test -n "$image"
+          Scripts/test-rendered-text.sh "$image"
+        env:
+          TMPDIR: ${{ runner.temp }}
+
+  macos-ui:
+    needs: [changes, macos-build, macos-runtimes]
+    if: ${{ needs.changes.outputs.crates == 'true' || needs.changes.outputs.macos == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name) }}
+    permissions:
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.macos-runtimes.outputs.ui) }}
+    uses: ./.github/workflows/macos-ui.yml # zizmor: ignore[self-repository] ./ is the documented local reusable workflow path
+    with:
+      runner: ${{ matrix.runner }}
+      runtime-major: ${{ matrix.runtime-major }}
+      minimum-xcode: ${{ matrix.minimum-xcode }}
+      shards: ${{ fromJSON(needs.macos-runtimes.outputs.ui-shards) }}
+
+  macos-application:
+    needs: [changes, macos-build, macos-runtimes]
+    if: ${{ needs.macos-runtimes.outputs.full == 'true' && (needs.changes.outputs.crates == 'true' || needs.changes.outputs.macos == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name)) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.macos-runtimes.outputs.application) }}
+    env:
+      CONFIGURATION: ${{ matrix.configuration }}
+    defaults:
+      run:
+        working-directory: macos
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          working_directory: macos
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: macos-rust-bindings
+          path: macos
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: macos/.build/xcode-packages
+          key: macos-xcode-spm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('macos/Package.swift', 'macos/App/project.yml') }}
+      - run: |
+          version="$(sw_vers -productVersion)"
+          [[ "${version%%.*}" == "$RUNTIME_MAJOR" ]]
+          Scripts/select-xcode.sh
+        env:
+          RUNTIME_MAJOR: ${{ matrix.runtime-major }}
+          MIN_XCODE_MAJOR: ${{ matrix.minimum-xcode }}
+          EXACT_XCODE_MAJOR: ${{ matrix.minimum-xcode }}
+      - run: just macos-xcode
+      - run: >-
+          xcodebuild -project App/Quotaline.xcodeproj -scheme "$SCHEME"
+          -configuration "$CONFIGURATION" -destination 'platform=macOS'
+          -derivedDataPath .build/app-derived -jobs 2
+          -clonedSourcePackagesDirPath .build/xcode-packages CODE_SIGNING_ALLOWED=NO
+          CODE_SIGN_IDENTITY= SPARKLE_PUBLIC_ED_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= build
+        env:
+          SCHEME: ${{ matrix.scheme }}
+      - run: >-
+          Scripts/verify-build-settings.sh "$TARGET" "$CONFIGURATION" "$DISTRIBUTION" "$CONDITION" "$SANDBOX"
+          "$ENTITLEMENTS"
+        env:
+          TARGET: ${{ matrix.target }}
+          DISTRIBUTION: ${{ matrix.distribution }}
+          CONDITION: ${{ matrix.condition }}
+          SANDBOX: ${{ matrix.sandbox }}
+          ENTITLEMENTS: ${{ matrix.entitlements }}
+      - run: >-
+          Scripts/verify-deployment-targets.sh
+          ".build/app-derived/Build/Products/$CONFIGURATION/Quotaline.app" 15.0
+      - run: >-
+          just macos-verify-app-bundle
+          ".build/app-derived/Build/Products/$CONFIGURATION/Quotaline.app"
+          "$DISTRIBUTION" "$UPDATER"
+        env:
+          DISTRIBUTION: ${{ matrix.distribution }}
+          UPDATER: ${{ matrix.updater }}
+      - run: >-
+          ditto -c -k
+          ".build/app-derived/Build/Products/$CONFIGURATION/Quotaline.app"
+          ".build/quotaline-$CONFIGURATION-macos.zip"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos-${{ matrix.configuration }}-${{ matrix.runtime-major }}-candidate
+          path: macos/.build/quotaline-${{ matrix.configuration }}-macos.zip
+          if-no-files-found: error
+          retention-days: 1

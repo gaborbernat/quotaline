@@ -1,0 +1,11 @@
+/target/
+/node_modules/
+/gnome/node_modules/
+/macos/Generated/
+/macos/src/QuotalineRust/
+*.zip
+/.cache/
+/docs/
+/website/public/
+/website/resources/
+/website/.hugo_build.lock

@@ -1,0 +1,20 @@
+[package]
+name = "quotaline-credential-sources"
+version = "0.1.8"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+memchr = "2.8.3"
+parking_lot = "0.12.5"
+rusqlite = { version = "0.40", features = ["bundled"] }
+serde_json = "1"
+thiserror = "2"
+toml = "1.1.8"
+quotaline-codex = { version = "0.1.8", path = "../../providers/codex" }
+quotaline-credentials = { version = "0.1.8", path = "../credentials" }
+quotaline-storage = { version = "0.1.8", path = "../../data/storage" }
+walkdir = "2"
+
+[dev-dependencies]
+tempfile = "3"

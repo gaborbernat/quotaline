@@ -1,0 +1,58 @@
+{
+  "$schema": "./gnome/node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "biome.json",
+      "gnome/package.json",
+      "gnome/tsconfig*.json",
+      "gnome/eslint.config.mjs",
+      "gnome/extension/**/*.ts",
+      "gnome/extension/**/*.js",
+      "gnome/extension/**/*.mjs",
+      "gnome/extension/**/*.json",
+      "website/assets/**/*.js",
+      "website/assets/**/*.css",
+      "!!**/target",
+      "!!**/node_modules"
+    ]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 4,
+    "lineWidth": 120
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "bracketSpacing": false,
+      "arrowParentheses": "asNeeded"
+    }
+  },
+  "linter": {
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["*.json", "gnome/*.json", "website/assets/**"],
+      "formatter": {
+        "indentWidth": 2
+      }
+    },
+    {
+      "includes": ["gnome/extension/src/shared-copy.ts"],
+      "formatter": {
+        "enabled": false
+      },
+      "assist": {
+        "enabled": false
+      }
+    }
+  ]
+}

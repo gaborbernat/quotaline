@@ -1,0 +1,101 @@
+baseURL = "/"
+locale = "en-US"
+defaultContentLanguage = "en"
+title = "Quotaline"
+enableRobotsTXT = true
+disableHugoGeneratorInject = true
+disableKinds = ["taxonomy", "term", "rss"]
+timeout = "60s"
+
+[params]
+description = """
+Claude, Codex, Gemini, Antigravity, Cursor and GitHub Copilot plan usage on macOS and GNOME: session and weekly \
+windows, reset countdowns, pace projections and history.\
+"""
+keywords = """
+quotaline,claude usage,claude code usage limit,claude weekly limit,codex usage,codex rate limit,copilot premium \
+requests,copilot quota,cursor usage limit,gemini cli quota,antigravity quota,ai usage tracker,llm usage monitor,ai \
+rate limit,menu bar,macos menu bar app,gnome shell extension,linux\
+"""
+tagline = "Your AI coding plan limits, one glance away"
+repository = "https://github.com/quotaline/quotaline"
+latestRelease = "https://github.com/quotaline/quotaline/releases"
+minimumOS = "macOS 15 · GNOME Shell 50"
+license = "MIT"
+author = "Bernát Gábor"
+brandGradientStart = "#4C3BE0"
+brandGradientEnd = "#9A6BFF"
+themeColor = "#5A46E8"
+mermaidVersion = "12.2.0"
+
+[[menu.main]]
+name = "Get started"
+url = "/start/"
+weight = 1
+
+[[menu.main]]
+name = "GNOME"
+url = "/gnome/"
+weight = 2
+
+[[menu.main]]
+name = "Reference"
+url = "/reference/"
+weight = 3
+
+[[menu.main]]
+name = "Explanation"
+url = "/explanation/"
+weight = 4
+
+[[menu.main]]
+name = "Troubleshooting"
+url = "/troubleshooting/"
+weight = 5
+
+[[menu.main]]
+name = "Contributing"
+url = "/contributing/"
+weight = 6
+
+[outputs]
+home = ["HTML", "llms", "webmanifest"]
+page = ["HTML", "md"]
+section = ["HTML", "md"]
+
+# Format defined at llmstxt.org.
+[outputFormats.llms]
+mediaType = "text/plain"
+baseName = "llms"
+isPlainText = true
+rel = "alternate"
+
+# The icons partial links this on every page, so it has to exist.
+[outputFormats.webmanifest]
+mediaType = "application/manifest+json"
+baseName = "site"
+isPlainText = true
+notAlternative = true
+
+[outputFormats.md]
+mediaType = "text/markdown"
+isPlainText = true
+rel = "alternate"
+
+[markup.goldmark.renderer]
+unsafe = true
+
+[markup.tableOfContents]
+startLevel = 2
+endLevel = 3
+
+[imaging]
+resampleFilter = "Lanczos"
+
+# "drawing" keeps the flat panels and hairlines of a UI screenshot crisp; "picture" softens them.
+[imaging.webp]
+quality = 92
+hint = "drawing"
+
+[minify]
+minifyOutput = true

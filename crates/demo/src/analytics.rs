@@ -1,0 +1,69 @@
+//! Generates provider analytics for shared demo previews.
+
+use chrono::{DateTime, Duration, Utc};
+use quotaline_analytics::Point;
+
+pub fn demo_analytics_at(id: &str, now: DateTime<Utc>, days: u32, long_text: bool) -> Option<Vec<Point>> {
+    if id != "claude" && id != "codex" {
+        return None;
+    }
+    let mut points = Vec::new();
+    for (index, offset) in (0..days).rev().enumerate() {
+        let day = demo_day(now, offset);
+        let activity = demo_activity(index);
+        let mut push = |metric: &str, series: &str, value: f64| {
+            points.push(Point {
+                day: day.clone(),
+                provider: id.into(),
+                metric: metric.into(),
+                series: if long_text {
+                    format!("{series}-verification-series-with-a-deliberately-long-identifier")
+                } else {
+                    series.into()
+                },
+                value,
+            });
+        };
+        if id == "claude" {
+            for (model, share) in [("fable", 0.6), ("sonnet", 0.3), ("haiku", 0.1)] {
+                push("inputTokens", model, 900_000.0 * share * activity);
+                push("cachedInputTokens", model, 4_000_000.0 * share * activity);
+                push("outputTokens", model, 120_000.0 * share * activity);
+                push("cacheWriteTokens", model, 300_000.0 * share * activity);
+                push("costUSD", model, 38.0 * share * activity);
+                push("messages", model, (140.0 * share * activity).round());
+                push("toolCalls", model, (260.0 * share * activity).round());
+            }
+            push("sessions", "sessions", (6.0 * activity).round());
+            push("projectCost", "/work/demo", 38.0 * activity);
+            push("projectMessages", "/work/demo", (140.0 * activity).round());
+        } else {
+            for (surface, share) in [("cli", 0.55), ("vscode", 0.3), ("web", 0.15)] {
+                push("surfaceUsagePercent", surface, 40.0 * share * activity);
+                push("turns", surface, (90.0 * share * activity).round());
+            }
+            for (model, share) in [("gpt-5.3-codex", 0.7), ("gpt-5.3-codex-spark", 0.3)] {
+                push("modelCredits", model, 12.0 * share * activity);
+                push("credits", model, 12.0 * share * activity);
+                push("threads", model, (14.0 * share * activity).round());
+            }
+            push("skillInvocations", "review", (5.0 * activity).round());
+            push("pluginInvocations", "github", (3.0 * activity).round());
+            push("codeReviews", "reviews", (2.0 * activity).round());
+            push("creditBalance", "Available credits", 28.0 * activity);
+        }
+    }
+    Some(points)
+}
+
+fn demo_day(now: DateTime<Utc>, offset: u32) -> String {
+    (now - Duration::days(i64::from(offset))).format("%Y-%m-%d").to_string()
+}
+
+fn demo_activity(index: usize) -> f64 {
+    0.55 + 0.45 * (index as f64 * 1.7 + 0.4).sin() * (index as f64 * 0.6).sin()
+}
+
+#[cfg(test)]
+#[path = "../tests/unit/analytics/tests.rs"]
+mod tests;

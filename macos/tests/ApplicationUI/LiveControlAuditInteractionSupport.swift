@@ -67,7 +67,7 @@ extension LiveControlAuditUITests {
       if viewport.contains(picker.frame) {
         picker.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
         let item = application.menuItems[label]
-        let opened = item.waitForExistence(timeout: 2)
+        let opened = item.waitUntilExists(timeout: 2)
         print("PICKER_HIT_DIAGNOSTIC label=\(label) frame=\(picker.frame) coordinateOpenedMenu=\(opened)")
         if opened { item.click() }
       }
@@ -75,7 +75,7 @@ extension LiveControlAuditUITests {
     XCTAssertTrue(revealed, "Cannot reach \(label) picker at \(picker.frame)")
     picker.click()
     let item = application.menuItems[label]
-    XCTAssertTrue(item.waitForExistence(timeout: 2), "The picker did not expose \(label)")
+    XCTAssertTrue(item.waitUntilExists(timeout: 2), "The picker did not expose \(label)")
     item.click()
     XCTAssertTrue(waitUntil(timeout: controlTimeout) { String(describing: picker.value).contains(label) })
   }
@@ -324,7 +324,8 @@ extension LiveControlAuditUITests {
 
   @MainActor
   func contentSignature(_ element: XCUIElement) throws -> String {
-    let frame = element.frame
+    let snapshot = try element.snapshot()
+    let frame = snapshot.frame
     var display: CGDirectDisplayID = 0
     var count: UInt32 = 0
     let onScreen =
@@ -332,26 +333,28 @@ extension LiveControlAuditUITests {
       && !frame.isEmpty && CGGetDisplaysWithRect(frame, 1, &display, &count) == .success
       && count == 1 && CGDisplayBounds(display).contains(frame)
     _ = try XCTUnwrap(onScreen ? true : nil, "Status-item capture requires a visible item; reported frame: \(frame)")
-    let value = String(describing: element.value)
+    let value = String(describing: snapshot.value)
     let pixels = element.screenshot().pngRepresentation
-    return "\(element.label)|\(value)|\(pixels.count)|\(pixels.hashValue)"
+    return "\(snapshot.label)|\(value)|\(pixels.count)|\(pixels.hashValue)"
   }
 
   @MainActor
   func assertAnchorsHeld(
     statusItem: XCUIElement, statusFrame: CGRect, surface: XCUIElement, panelFrame: CGRect, action: String
-  ) {
-    XCTAssertFalse(statusItem.label.isEmpty, "\(action) removed the status-item accessibility label")
-    XCTAssertLessThan(abs(statusItem.frame.minX - statusFrame.minX), 2, "\(action) moved the status item")
-    XCTAssertLessThan(abs(statusItem.frame.width - statusFrame.width), 2, "\(action) resized the open status item")
-    XCTAssertLessThan(abs(surface.frame.minX - panelFrame.minX), 2, "\(action) moved the panel horizontally")
-    XCTAssertLessThan(abs(surface.frame.minY - panelFrame.minY), 2, "\(action) moved the panel top edge")
+  ) throws {
+    let status = try statusItem.snapshot()
+    let panel = try surface.snapshot()
+    XCTAssertFalse(status.label.isEmpty, "\(action) removed the status-item accessibility label")
+    XCTAssertLessThan(abs(status.frame.minX - statusFrame.minX), 2, "\(action) moved the status item")
+    XCTAssertLessThan(abs(status.frame.width - statusFrame.width), 2, "\(action) resized the open status item")
+    XCTAssertLessThan(abs(panel.frame.minX - panelFrame.minX), 2, "\(action) moved the panel horizontally")
+    XCTAssertLessThan(abs(panel.frame.minY - panelFrame.minY), 2, "\(action) moved the panel top edge")
   }
 
   @MainActor
   func retainChooserScreenshot(_ application: XCUIApplication, named name: String) {
     let cancel = application.buttons["CancelButton"]
-    XCTAssertTrue(cancel.waitForExistence(timeout: 2))
+    XCTAssertTrue(cancel.waitUntilExists(timeout: 2))
     XCTAssertTrue(cancel.isHittable)
     let attachment = XCTAttachment(screenshot: application.screenshot())
     attachment.name = name
@@ -364,7 +367,7 @@ extension LiveControlAuditUITests {
     let panel = application.descendants(matching: .any).matching(
       NSPredicate(format: "identifier IN %@", ["save-panel", "open-panel"])
     ).firstMatch
-    let presented = panel.waitForExistence(timeout: 2)
+    let presented = panel.waitUntilExists(timeout: 2)
     XCTAssertTrue(presented, "The action did not present an on-screen native panel")
     guard presented else { return }
     let location = panel.popUpButtons["where popup"]
@@ -379,7 +382,7 @@ extension LiveControlAuditUITests {
     cancel.click()
     XCTAssertTrue(cancel.waitForNonExistence(timeout: 2))
     activate(application)
-    XCTAssertTrue(application.descendants(matching: .any)["popover-surface"].waitForExistence(timeout: 2))
+    XCTAssertTrue(application.descendants(matching: .any)["popover-surface"].waitUntilExists(timeout: 2))
   }
 
   /// Hit testing spans every application on screen, so a window of the runner or of whichever application a native

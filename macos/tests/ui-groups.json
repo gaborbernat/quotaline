@@ -6,6 +6,7 @@
     "PerformanceBenchmarks/testTabSwitchLatencyAndFrameStability"
   ],
   "lifecycle": [
+    "QuotalineApplicationUITests/testMissingControlDoesNotBecomeReady",
     "QuotalineApplicationUITests/testQuitClosesTheVerificationApplication",
     "QuotalineApplicationUITests/testDemoCanTurnOffAndBackOnWithoutLeavingVerification",
     "QuotalineApplicationUITests/testEscapeClosesEveryTabAndTheStatusItemReopensIt",

@@ -78,9 +78,7 @@ extension LiveControlAuditUITests {
         "disclosure-content-" + identifier.dropFirst("disclosure-".count)]
       if content.exists { continue }
       let group = surface.descendants(matching: .any).matching(identifier: identifier).firstMatch
-      var disclosure: XCUIElement {
-        group.elementType == .disclosureTriangle ? group : group.disclosureTriangles.firstMatch
-      }
+      let disclosure = group.elementType == .disclosureTriangle ? group : group.disclosureTriangles.firstMatch
       guard disclosure.exists else {
         XCTFail("Missing native disclosure for \(identifier)")
         continue
@@ -91,7 +89,7 @@ extension LiveControlAuditUITests {
           + "surface=\(surface.frame)")
       disclosure.click()
       XCTAssertTrue(
-        content.waitForExistence(timeout: controlTimeout),
+        content.waitUntilExists(timeout: controlTimeout),
         "\(identifier) did not expand after clicking its heading")
     }
     scrollToTop(surface)

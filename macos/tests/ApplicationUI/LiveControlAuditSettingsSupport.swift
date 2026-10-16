@@ -47,11 +47,11 @@ extension LiveControlAuditUITests {
     XCTAssertTrue(waitUntil(timeout: controlTimeout) { self.isSelected(customFormat) })
     XCTAssertTrue(
       try waitUntil(timeout: controlTimeout) { try self.contentSignature(statusItem) != formatSignature })
-    assertAnchorsHeld(
+    try assertAnchorsHeld(
       statusItem: statusItem, statusFrame: frameBeforeStatusEdits,
       surface: surface, panelFrame: panelBeforeStatusEdits, action: "Format")
     let template = application.textViews["status-template"]
-    XCTAssertTrue(template.waitForExistence(timeout: 2), "Template must name the editable text view")
+    XCTAssertTrue(template.waitUntilExists(timeout: 2), "Template must name the editable text view")
     XCTAssertTrue(template.isEnabled)
     XCTAssertEqual(template.label, "Template")
     XCTAssertTrue(application.staticTexts["{cell}  {pct}  {label}  {provider}  {window}  {reset}  {pctOrReset}"].exists)
@@ -63,17 +63,17 @@ extension LiveControlAuditUITests {
     replaceText(in: template, with: "{label}:{pct}", application: application)
     XCTAssertTrue(
       try waitUntil(timeout: controlTimeout) { try self.contentSignature(statusItem) != templateSignature })
-    assertAnchorsHeld(
+    try assertAnchorsHeld(
       statusItem: statusItem, statusFrame: frameBeforeStatusEdits,
       surface: surface, panelFrame: panelBeforeStatusEdits, action: "Template")
 
     let decimals = application.steppers["percent-decimals"]
-    XCTAssertTrue(decimals.waitForExistence(timeout: 2))
+    XCTAssertTrue(decimals.waitUntilExists(timeout: 2))
     let decimalsSignature = try contentSignature(statusItem)
     incrementStepper(decimals)
     XCTAssertTrue(
       try waitUntil(timeout: controlTimeout) { try self.contentSignature(statusItem) != decimalsSignature })
-    assertAnchorsHeld(
+    try assertAnchorsHeld(
       statusItem: statusItem, statusFrame: frameBeforeStatusEdits,
       surface: surface, panelFrame: panelBeforeStatusEdits, action: "Decimals")
 
@@ -92,11 +92,11 @@ extension LiveControlAuditUITests {
     application.typeKey(.enter, modifierFlags: [])
     XCTAssertTrue(
       try waitUntil(timeout: controlTimeout) { try self.contentSignature(statusItem) != labelSignature })
-    assertAnchorsHeld(
+    try assertAnchorsHeld(
       statusItem: statusItem, statusFrame: frameBeforeStatusEdits,
       surface: surface, panelFrame: panelBeforeStatusEdits, action: "Short label")
     let revert = application.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Revert label for '")).firstMatch
-    XCTAssertTrue(revert.waitForExistence(timeout: 2))
+    XCTAssertTrue(revert.waitUntilExists(timeout: 2))
     let revertRecord = scenarioRecord(tab: "Settings", label: "Revert short label", element: revert, action: "click")
     revert.click()
     XCTAssertTrue(waitUntil(timeout: controlTimeout) { (label.value as? String) == originalLabel })
@@ -135,7 +135,7 @@ extension LiveControlAuditUITests {
     // Nothing has focused the filter yet, so typing proves Command-F moved focus there.
     application.typeKey("f", modifierFlags: .command)
     let modelFilter = application.textFields["model-filter"]
-    XCTAssertTrue(modelFilter.waitForExistence(timeout: 2))
+    XCTAssertTrue(modelFilter.waitUntilExists(timeout: 2))
     modelFilter.typeText("route")
     XCTAssertEqual(modelFilter.value as? String, "route", "Command-F did not focus Filter models")
     let logSearch = application.textFields["Search log"]
@@ -183,7 +183,7 @@ extension LiveControlAuditUITests {
     XCTAssertTrue(reveal(reset, in: surface))
     reset.click()
     let alert = application.sheets.containing(.staticText, identifier: "Reset all settings?").firstMatch
-    XCTAssertTrue(alert.waitForExistence(timeout: 2))
+    XCTAssertTrue(alert.waitUntilExists(timeout: 2))
     XCTAssertTrue(alert.buttons["Cancel"].isHittable)
     alert.buttons["Cancel"].click()
     XCTAssertTrue(alert.waitForNonExistence(timeout: 2))
@@ -194,8 +194,8 @@ extension LiveControlAuditUITests {
     let reopenSampler = WindowFrameSampler(processIdentifier: processIdentifier)
     reopenSampler.start()
     reopen()
-    XCTAssertTrue(popoverTabs(in: application).waitForExistence(timeout: 2))
-    XCTAssertTrue(application.textFields["model-filter"].waitForExistence(timeout: 2))
+    XCTAssertTrue(popoverTabs(in: application).waitUntilExists(timeout: 2))
+    XCTAssertTrue(application.textFields["model-filter"].waitUntilExists(timeout: 2))
     let reopenTimeline = reopenSampler.stop()
     XCTAssertFalse(reopenTimeline.isEmpty)
     if let settled = reopenTimeline.last?.frame {
@@ -382,7 +382,7 @@ extension LiveControlAuditUITests {
     XCTAssertTrue(reveal(clear, in: surface))
     clear.click()
     let destructive = application.buttons["Clear History"]
-    XCTAssertTrue(destructive.waitForExistence(timeout: 2), "Clear History must require confirmation")
+    XCTAssertTrue(destructive.waitUntilExists(timeout: 2), "Clear History must require confirmation")
     application.typeKey(.escape, modifierFlags: [])
     XCTAssertTrue(destructive.waitForNonExistence(timeout: 2))
     records.append(
@@ -437,7 +437,7 @@ extension LiveControlAuditUITests {
       scenarioRecord(tab: "Settings", label: "Detailed logging", element: detailed, action: "enable")
     ]
     let log = application.textViews["Log"]
-    XCTAssertTrue(log.waitForExistence(timeout: 2))
+    XCTAssertTrue(log.waitUntilExists(timeout: 2))
     application.typeKey("r", modifierFlags: .command)
     XCTAssertTrue(
       waitUntil(timeout: 2) { String(describing: log.value).contains("refresh.provider") },
@@ -471,7 +471,7 @@ extension LiveControlAuditUITests {
       tab: "Settings", label: "Show Full Log", element: fullLog, action: "open and close")
     fullLog.click()
     XCTAssertTrue(surface.waitForNonExistence(timeout: 2))
-    XCTAssertTrue(application.windows["Quotaline Log"].waitForExistence(timeout: 2))
+    XCTAssertTrue(application.windows["Quotaline Log"].waitUntilExists(timeout: 2))
     application.typeKey("f", modifierFlags: .command)
     let fullLogSearch = application.textFields.matching(NSPredicate(format: "label == 'Search log'"))
       .allElementsBoundByIndex.first { $0.isHittable }
@@ -487,7 +487,7 @@ extension LiveControlAuditUITests {
     application.typeKey("w", modifierFlags: .command)
     records.append(fullLogRecord)
     reopen()
-    XCTAssertTrue(surface.waitForExistence(timeout: 2))
+    XCTAssertTrue(surface.waitUntilExists(timeout: 2))
     XCTAssertTrue(reveal(detailed, in: surface))
     set(detailed, enabled: false)
     return records

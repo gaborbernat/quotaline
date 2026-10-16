@@ -15,16 +15,16 @@ extension LiveControlAuditUITests {
     let metric = application.descendants(matching: .any)["history-metric"]
     let start = application.datePickers["history-from"]
     let end = application.datePickers["history-to"]
-    XCTAssertTrue(period.waitForExistence(timeout: 2))
+    XCTAssertTrue(period.waitUntilExists(timeout: 2))
     XCTAssertEqual(segments(in: period).count, 6, "History must expose Now, four fixed periods, and Custom")
-    XCTAssertTrue(metric.waitForExistence(timeout: 2))
+    XCTAssertTrue(metric.waitUntilExists(timeout: 2))
     try selectMenuItem("Usage %", from: metric, application: application)
     let utc = application.checkBoxes["UTC"]
-    XCTAssertTrue(utc.waitForExistence(timeout: 2))
+    XCTAssertTrue(utc.waitUntilExists(timeout: 2))
     XCTAssertTrue(utc.isEnabled)
     toggleAndRestore(utc)
     records.append(scenarioRecord(tab: "History", label: "UTC boundaries", element: utc, action: "toggle twice"))
-    XCTAssertTrue(rollup.waitForExistence(timeout: 2))
+    XCTAssertTrue(rollup.waitUntilExists(timeout: 2))
     XCTAssertTrue(rollup.isEnabled, "Window Usage must enable Rollup")
     XCTAssertEqual(segments(in: rollup).count, 3, "Rollup must expose Minute, Hour, and Day")
     for label in ["Minute", "Hour", "Day"] {
@@ -39,12 +39,12 @@ extension LiveControlAuditUITests {
     XCTAssertTrue(rollup.waitForNonExistence(timeout: 2), "Daily analytics must hide the inapplicable rollup")
     XCTAssertFalse(utc.exists, "Daily analytics always use UTC")
     let stacked = application.checkBoxes["history-stacked"]
-    XCTAssertTrue(stacked.waitForExistence(timeout: 2))
+    XCTAssertTrue(stacked.waitUntilExists(timeout: 2))
     XCTAssertTrue(stacked.isEnabled, "An additive metric with parallel series must enable Stacked")
     toggleAndRestore(stacked)
     records.append(scenarioRecord(tab: "History", label: "Additive metric stacking", element: stacked))
 
-    XCTAssertTrue(application.descendants(matching: .any)["history-chart"].waitForExistence(timeout: 2))
+    XCTAssertTrue(application.descendants(matching: .any)["history-chart"].waitUntilExists(timeout: 2))
     let series = application.descendants(matching: .any).matching(
       NSPredicate(format: "identifier BEGINSWITH %@", "history-series-")
     ).allElementsBoundByIndex
@@ -63,7 +63,7 @@ extension LiveControlAuditUITests {
     segment("Today", in: period).click()
     let previous = application.buttons["history-previous-period"]
     let next = application.buttons["history-next-period"]
-    XCTAssertTrue(previous.waitForExistence(timeout: 2))
+    XCTAssertTrue(previous.waitUntilExists(timeout: 2))
     XCTAssertTrue(previous.isEnabled)
     previous.click()
     XCTAssertTrue(waitUntil(timeout: controlTimeout) { next.isEnabled })
@@ -77,8 +77,8 @@ extension LiveControlAuditUITests {
 
     let custom = segment("Custom", in: period)
     custom.click()
-    XCTAssertTrue(start.waitForExistence(timeout: 2))
-    XCTAssertTrue(end.waitForExistence(timeout: 2))
+    XCTAssertTrue(start.waitUntilExists(timeout: 2))
+    XCTAssertTrue(end.waitUntilExists(timeout: 2))
     XCTAssertTrue(start.isEnabled)
     XCTAssertTrue(end.isEnabled)
     // Widen the range before moving To so both edits remain within its bounds.
@@ -89,13 +89,13 @@ extension LiveControlAuditUITests {
     segment("Today", in: period).click()
     XCTAssertTrue(start.waitForNonExistence(timeout: 2))
     application.buttons["history-date-range"].click()
-    XCTAssertTrue(start.waitForExistence(timeout: 2))
+    XCTAssertTrue(start.waitUntilExists(timeout: 2))
     adjustDate(start, increasing: false)
     XCTAssertTrue(isSelected(custom))
     records.append(scenarioRecord(tab: "History", label: "Custom From and To", element: start))
 
     let export = application.buttons["history-export"]
-    XCTAssertTrue(export.waitForExistence(timeout: 2))
+    XCTAssertTrue(export.waitUntilExists(timeout: 2))
     let exportRecord = scenarioRecord(tab: "History", label: "Export CSV save panel Cancel", element: export)
     export.click()
     retainChooserScreenshot(application, named: "History export sheet")
@@ -109,7 +109,7 @@ extension LiveControlAuditUITests {
     let surface = application.descendants(matching: .any)["popover-surface"]
     var records: [ControlAuditRecord] = []
     let refresh = application.buttons["footer-refresh"]
-    XCTAssertTrue(refresh.waitForExistence(timeout: 2))
+    XCTAssertTrue(refresh.waitUntilExists(timeout: 2))
     XCTAssertTrue(refresh.isHittable)
     refresh.click()
     records.append(scenarioRecord(tab: "Usage", label: "Refresh all providers", element: refresh, action: "click"))

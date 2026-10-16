@@ -40,7 +40,7 @@ final class LiveControlAuditUITests: XCTestCase {
       testName: name, profile: VerificationProfile(fixture: .controlAudit, nativePanels: true))
     addTeardownBlock { @MainActor in await verification.terminate() }
     try verification.launch()
-    XCTAssertTrue(verification.tabs.waitForExistence(timeout: 5))
+    XCTAssertTrue(verification.tabs.waitUntilExists(timeout: 5))
     verification.tab("History").click()
     let application = verification.application
     let period = application.descendants(matching: .any)["history-period"]
@@ -50,7 +50,7 @@ final class LiveControlAuditUITests: XCTestCase {
 
     application.buttons["history-export"].click()
     let save = application.sheets["save-panel"].buttons["OKButton"]
-    XCTAssertTrue(save.waitForExistence(timeout: 2))
+    XCTAssertTrue(save.waitUntilExists(timeout: 2))
     XCTAssertTrue(save.isHittable)
     save.click()
 
@@ -64,7 +64,7 @@ final class LiveControlAuditUITests: XCTestCase {
     XCTAssertGreaterThan(rows.count, 1, "The selected period exported no synthetic samples")
     XCTAssertTrue(verification.tabs.isEnabled)
     verification.tab("Usage").click()
-    XCTAssertTrue(application.descendants(matching: .any)["tab-content-Usage"].waitForExistence(timeout: 2))
+    XCTAssertTrue(application.descendants(matching: .any)["tab-content-Usage"].waitUntilExists(timeout: 2))
   }
 
   @MainActor
@@ -90,7 +90,7 @@ final class LiveControlAuditUITests: XCTestCase {
       testName: name, profile: VerificationProfile(fixture: .controlAudit, nativePanels: true), detailedLogging: true)
     addTeardownBlock { @MainActor in await verification.terminate() }
     try verification.launch()
-    XCTAssertTrue(verification.tabs.waitForExistence(timeout: 5))
+    XCTAssertTrue(verification.tabs.waitUntilExists(timeout: 5))
     verification.tab("Settings").click()
     let application = verification.application
     let surface = application.descendants(matching: .any)["popover-surface"]
@@ -102,7 +102,7 @@ final class LiveControlAuditUITests: XCTestCase {
     try application.screenshot().pngRepresentation.write(to: output.appendingPathComponent("provider-access.png"))
     XCTAssertTrue(records.allSatisfy { $0.result == "passed" })
     verification.tab("Usage").click()
-    XCTAssertTrue(application.descendants(matching: .any)["tab-content-Usage"].waitForExistence(timeout: 2))
+    XCTAssertTrue(application.descendants(matching: .any)["tab-content-Usage"].waitUntilExists(timeout: 2))
     print("CONTROL_AUDIT=\(output.path) controls=\(records.count)")
   }
 
@@ -128,7 +128,7 @@ final class LiveControlAuditUITests: XCTestCase {
       detailedLogging: tab == "History" || section == .menuBar)
     addTeardownBlock { @MainActor in await verification.terminate() }
     try verification.launch()
-    XCTAssertTrue(verification.tabs.waitForExistence(timeout: 5))
+    XCTAssertTrue(verification.tabs.waitUntilExists(timeout: 5))
     verification.bringToFront()
 
     let output = try outputDirectory()
@@ -137,9 +137,9 @@ final class LiveControlAuditUITests: XCTestCase {
     do {
       if tab != "Usage" { verification.tab(tab).click() }
       XCTAssertTrue(
-        verification.application.descendants(matching: .any)["tab-content-\(tab)"].waitForExistence(timeout: 2))
+        verification.application.descendants(matching: .any)["tab-content-\(tab)"].waitUntilExists(timeout: 2))
       if tab == "Settings" {
-        XCTAssertTrue(verification.application.textFields["model-filter"].waitForExistence(timeout: 2))
+        XCTAssertTrue(verification.application.textFields["model-filter"].waitUntilExists(timeout: 2))
       }
       if tab != "History" && !modelSelectionOnly {
         try expandSupportingDetails(in: verification.application, section: section)
@@ -218,9 +218,9 @@ final class LiveControlAuditUITests: XCTestCase {
       appearance: appearance, doubleLocalizedStrings: true, detailedLogging: true)
     addTeardownBlock { @MainActor in await verification.terminate() }
     try verification.launch()
-    XCTAssertTrue(verification.tabs.waitForExistence(timeout: 5))
+    XCTAssertTrue(verification.tabs.waitUntilExists(timeout: 5))
     let surface = verification.application.descendants(matching: .any)["popover-surface"]
-    XCTAssertTrue(surface.waitForExistence(timeout: 2))
+    XCTAssertTrue(surface.waitUntilExists(timeout: 2))
     let window = verification.application.windows["Quotaline"]
     let chromeWidth = window.frame.width - surface.frame.width
     let expectedWidth = min(880, (width ?? Double.greatestFiniteMagnitude) - 24 - chromeWidth)
@@ -229,10 +229,10 @@ final class LiveControlAuditUITests: XCTestCase {
       movePointerOffPanel(in: verification.application)
       verification.tab(tab).click()
       XCTAssertTrue(
-        verification.application.descendants(matching: .any)["tab-content-\(tab)"].waitForExistence(timeout: 2))
+        verification.application.descendants(matching: .any)["tab-content-\(tab)"].waitUntilExists(timeout: 2))
       XCTAssertEqual(surface.frame.width, expectedWidth, accuracy: 3, "\(tab) opened at another width")
       if tab == "Settings" {
-        XCTAssertTrue(verification.application.textFields["model-filter"].waitForExistence(timeout: 2))
+        XCTAssertTrue(verification.application.textFields["model-filter"].waitUntilExists(timeout: 2))
       }
       if tab != "History" { try expandSupportingDetails(in: verification.application) }
       if tab == "Usage" {
@@ -240,7 +240,7 @@ final class LiveControlAuditUITests: XCTestCase {
           verification.application.descendants(matching: .any).matching(
             NSPredicate(
               format: "label CONTAINS %@", "Verification warning text is intentionally long")
-          ).firstMatch.waitForExistence(timeout: 5))
+          ).firstMatch.waitUntilExists(timeout: 5))
       }
       let exposedText = try captureAndAuditPages(
         tab: tab, surface: surface, application: verification.application, output: output,
@@ -264,7 +264,7 @@ final class LiveControlAuditUITests: XCTestCase {
     let verification = VerificationApplication(testName: name, detailedLogging: true)
     addTeardownBlock { @MainActor in await verification.terminate() }
     try verification.launch()
-    XCTAssertTrue(verification.tabs.waitForExistence(timeout: 5))
+    XCTAssertTrue(verification.tabs.waitUntilExists(timeout: 5))
     let output = try outputDirectory()
     let processIdentifier = try verification.processIdentifier()
     let surface = verification.application.descendants(matching: .any)["popover-surface"]
@@ -323,9 +323,9 @@ final class LiveControlAuditUITests: XCTestCase {
   ) throws {
     verification.tab(tab).click()
     XCTAssertTrue(
-      verification.application.descendants(matching: .any)["tab-content-\(tab)"].waitForExistence(timeout: 2))
+      verification.application.descendants(matching: .any)["tab-content-\(tab)"].waitUntilExists(timeout: 2))
     if tab == "Settings" {
-      XCTAssertTrue(verification.application.textFields["model-filter"].waitForExistence(timeout: 2))
+      XCTAssertTrue(verification.application.textFields["model-filter"].waitUntilExists(timeout: 2))
     }
     let surface = verification.application.descendants(matching: .any)["popover-surface"]
     XCTAssertGreaterThanOrEqual(

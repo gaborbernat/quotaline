@@ -79,8 +79,8 @@ public enum LiveDependencies {
     workspaceOpen: WorkspaceOpen? = nil,
     legacyPreferences: (@Sendable (String) -> [String: Any]?)? = nil
   ) async throws -> AppDependencies {
-    let legacyImport = legacyPreferences.flatMap {
-      LegacyImport.run(
+    let legacyImport = try legacyPreferences.flatMap {
+      try LegacyImport.run(
         defaults: defaults, domain: appInfo.bundleIdentifier, persistentDomain: $0,
         supportDirectory: paths.supportDirectory)
     }

@@ -24,7 +24,7 @@ private func supportDirectories(legacy: Bool, current: Bool) throws -> URL {
 
 @Test func legacyImportCopiesPreferencesIntoAnEmptyDomain() throws {
   let defaults = testDefaults()
-  let line = LegacyImport.run(
+  let line = try LegacyImport.run(
     defaults: defaults, domain: "tech.bernat.quotaline",
     persistentDomain: domains(current: nil, legacy: ["demoMode": true]),
     supportDirectory: try supportDirectories(legacy: false, current: false))
@@ -34,7 +34,7 @@ private func supportDirectories(legacy: Bool, current: Bool) throws -> URL {
 
 @Test func legacyImportKeepsPreferencesTheNewDomainAlreadyHas() throws {
   let defaults = testDefaults()
-  let line = LegacyImport.run(
+  let line = try LegacyImport.run(
     defaults: defaults, domain: "tech.bernat.quotaline",
     persistentDomain: domains(current: ["demoMode": false], legacy: ["demoMode": true]),
     supportDirectory: try supportDirectories(legacy: false, current: false))
@@ -44,7 +44,7 @@ private func supportDirectories(legacy: Bool, current: Bool) throws -> URL {
 
 @Test func legacyImportSkipsPreferencesWithoutABundleIdentifier() throws {
   let defaults = testDefaults()
-  let line = LegacyImport.run(
+  let line = try LegacyImport.run(
     defaults: defaults, domain: nil, persistentDomain: domains(current: nil, legacy: ["demoMode": true]),
     supportDirectory: try supportDirectories(legacy: false, current: false))
   #expect(defaults.object(forKey: "demoMode") == nil)
@@ -54,7 +54,7 @@ private func supportDirectories(legacy: Bool, current: Bool) throws -> URL {
 @Test(arguments: [true, false])
 func legacyImportSkipsMissingLegacyPreferences(legacyDomainExists: Bool) throws {
   let defaults = testDefaults()
-  let line = LegacyImport.run(
+  let line = try LegacyImport.run(
     defaults: defaults, domain: "tech.bernat.quotaline",
     persistentDomain: domains(current: [:], legacy: legacyDomainExists ? [:] : nil),
     supportDirectory: try supportDirectories(legacy: false, current: false))
@@ -63,7 +63,7 @@ func legacyImportSkipsMissingLegacyPreferences(legacyDomainExists: Bool) throws 
 
 @Test func legacyImportCopiesTheSupportDirectoryAndKeepsTheOriginal() throws {
   let support = try supportDirectories(legacy: true, current: false)
-  let line = LegacyImport.run(
+  let line = try LegacyImport.run(
     defaults: testDefaults(), domain: "tech.bernat.quotaline", persistentDomain: domains(current: nil, legacy: nil),
     supportDirectory: support)
   let legacy = support.deletingLastPathComponent().appendingPathComponent(LegacyImport.supportDirectoryName)
@@ -74,21 +74,28 @@ func legacyImportSkipsMissingLegacyPreferences(legacyDomainExists: Bool) throws 
 
 @Test func legacyImportLeavesAnExistingSupportDirectoryAlone() throws {
   let support = try supportDirectories(legacy: true, current: true)
-  let line = LegacyImport.run(
+  let line = try LegacyImport.run(
     defaults: testDefaults(), domain: "tech.bernat.quotaline", persistentDomain: domains(current: nil, legacy: nil),
     supportDirectory: support)
   #expect(try String(contentsOf: support.appendingPathComponent("usage.sqlite"), encoding: .utf8) == "current")
   #expect(line == nil)
 }
 
-@Test func legacyImportReportsACopyFailure() throws {
+@Test func legacyImportRetriesAfterACopyFailure() throws {
   let support = try supportDirectories(legacy: true, current: false)
-  let parent = support.deletingLastPathComponent()
-  try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: parent.path)
-  defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: parent.path) }
-  let line = LegacyImport.run(
+  let legacy = support.deletingLastPathComponent().appendingPathComponent(LegacyImport.supportDirectoryName)
+  let database = legacy.appendingPathComponent("usage.sqlite")
+  try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: database.path)
+  defer { try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: database.path) }
+  #expect(throws: (any Error).self) {
+    try LegacyImport.run(
+      defaults: testDefaults(), domain: "tech.bernat.quotaline", persistentDomain: domains(current: nil, legacy: nil),
+      supportDirectory: support)
+  }
+  #expect(!FileManager.default.fileExists(atPath: support.path))
+  try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: database.path)
+  _ = try LegacyImport.run(
     defaults: testDefaults(), domain: "tech.bernat.quotaline", persistentDomain: domains(current: nil, legacy: nil),
     supportDirectory: support)
-  #expect(line?.hasPrefix("Imported Token Menu Bar data: could not copy Token Menu Bar support files: ") == true)
-  #expect(!FileManager.default.fileExists(atPath: support.path))
+  #expect(try String(contentsOf: support.appendingPathComponent("usage.sqlite"), encoding: .utf8) == "legacy")
 }

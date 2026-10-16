@@ -10,10 +10,10 @@ public enum LegacyImport {
   public static func run(
     defaults: UserDefaults, domain: String?, persistentDomain: (String) -> [String: Any]?, supportDirectory: URL,
     fileManager: FileManager = .default
-  ) -> String? {
+  ) throws -> String? {
     let outcomes = [
       importPreferences(defaults: defaults, domain: domain, persistentDomain: persistentDomain),
-      copySupportDirectory(to: supportDirectory, fileManager: fileManager),
+      try copySupportDirectory(to: supportDirectory, fileManager: fileManager),
     ].compactMap { $0 }
     return outcomes.isEmpty ? nil : "Imported Token Menu Bar data: " + outcomes.joined(separator: "; ")
   }
@@ -29,16 +29,15 @@ public enum LegacyImport {
     return "copied \(legacy.count) preferences from \(bundleIdentifier)"
   }
 
-  private static func copySupportDirectory(to supportDirectory: URL, fileManager: FileManager) -> String? {
+  private static func copySupportDirectory(to supportDirectory: URL, fileManager: FileManager) throws -> String? {
     let legacy = supportDirectory.deletingLastPathComponent().appendingPathComponent(supportDirectoryName)
     guard !fileManager.fileExists(atPath: supportDirectory.path), fileManager.fileExists(atPath: legacy.path) else {
       return nil
     }
-    do {
-      try fileManager.copyItem(at: legacy, to: supportDirectory)
-      return "copied \(supportDirectoryName) support files to \(supportDirectory.lastPathComponent)"
-    } catch {
-      return "could not copy \(supportDirectoryName) support files: \(error.localizedDescription)"
-    }
+    let staging = supportDirectory.deletingLastPathComponent().appendingPathComponent(".quotaline-import-\(UUID())")
+    defer { try? fileManager.removeItem(at: staging) }
+    try fileManager.copyItem(at: legacy, to: staging)
+    try fileManager.moveItem(at: staging, to: supportDirectory)
+    return "copied \(supportDirectoryName) support files to \(supportDirectory.lastPathComponent)"
   }
 }

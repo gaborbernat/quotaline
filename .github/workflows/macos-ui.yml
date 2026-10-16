@@ -93,10 +93,10 @@ jobs:
         with:
           deriveddata-directory: macos/.build/ui-derived
           sourcepackages-directory: macos/.build/xcode-packages
-          key: ui-build-v3-${{ runner.os }}-${{ runner.arch }}-${{ inputs.runner }}-${{ steps.xcode.outputs.cache }}-${{ hashFiles('macos/Package.swift',
+          key: ui-build-v4-${{ runner.os }}-${{ runner.arch }}-${{ inputs.runner }}-${{ steps.xcode.outputs.cache }}-${{ hashFiles('macos/Package.swift',
             'macos/App/project.yml') }}-${{ github.sha }}
           restore-keys: |
-            ui-build-v3-${{ runner.os }}-${{ runner.arch }}-${{ inputs.runner }}-${{ steps.xcode.outputs.cache }}-${{ hashFiles('macos/Package.swift', 'macos/App/project.yml') }}-
+            ui-build-v4-${{ runner.os }}-${{ runner.arch }}-${{ inputs.runner }}-${{ steps.xcode.outputs.cache }}-${{ hashFiles('macos/Package.swift', 'macos/App/project.yml') }}-
           swiftpm-cache-key: xcode-spm-${{ runner.os }}-${{ runner.arch }}-${{ inputs.runner }}-${{ steps.xcode.outputs.cache
             }}-${{ hashFiles('macos/Package.swift', 'macos/App/project.yml') }}
           use-default-mtime-targets: false
@@ -117,7 +117,11 @@ jobs:
           xcodebuild -project App/Quotaline.xcodeproj -scheme "$UI_SCHEME" -configuration Verification \
             -destination "platform=macOS,arch=$(uname -m)" -derivedDataPath .build/ui-derived \
             -clonedSourcePackagesDirPath .build/xcode-packages \
-            -jobs 2 ONLY_ACTIVE_ARCH=YES -showBuildTimingSummary build-for-testing \
+            -jobs 2 ONLY_ACTIVE_ARCH=YES \
+            COMPILATION_CACHE_ENABLE_CACHING=YES \
+            COMPILATION_CACHE_ENABLE_DIAGNOSTIC_REMARKS=YES \
+            COMPILATION_CACHE_CAS_PATH="$PWD/.build/ui-derived/CompilationCache.noindex" \
+            -showBuildTimingSummary build-for-testing \
             2>&1 | tee .build/ui-build.log | tail -50
       - name: Verify the complete UI inventory
         id: inventory

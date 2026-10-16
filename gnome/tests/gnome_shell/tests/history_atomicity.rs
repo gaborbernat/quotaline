@@ -133,3 +133,52 @@ fn failed_analytics_progress_save_is_reported() {
             .expect("service log watcher failed");
     }
 }
+
+#[cfg(feature = "fixture-api")]
+#[test]
+fn rejected_analytics_do_not_advance_download_progress() {
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let server = codex_analytics_server(&runtime);
+    runtime.block_on(
+        Mock::given(matchers::path("/backend-api/wham/usage"))
+            .respond_with(ResponseTemplate::new(503))
+            .with_priority(1)
+            .mount(&server),
+    );
+    let fixture = isolated_service_configured(
+        &serde_json::json!({"providers":{
+            "claude":false,"codex":true,"gemini":false,"antigravity":false,"cursor":false,"copilot":false
+        }}),
+        |root| {
+            let credential = root.join("home/.codex/auth.json");
+            fs::create_dir_all(credential.parent().unwrap()).unwrap();
+            fs::write(credential, r#"{"tokens":{"access_token":"new-account"}}"#).unwrap();
+            quotaline_history::Store::open(Some(&root.join("data/quotaline/history.sqlite3")), 60)
+                .unwrap()
+                .activate_account("codex", "previous-account")
+                .unwrap();
+        },
+        |command| {
+            command.env("TMB_FIXTURE_API_URL", server.uri());
+            command.env("TMB_FIXTURE_FAST_SCHEDULE", "1");
+        },
+    );
+    let log = fixture.scratch.path().join("service.log");
+    let (_watcher, events) = database_events(&log);
+    while !fs::read_to_string(&log)
+        .unwrap()
+        .contains("Codex analytics discarded after account change")
+    {
+        events
+            .recv_timeout(Duration::from_secs(10))
+            .expect("Analytics did not finish")
+            .unwrap();
+    }
+    assert!(
+        !fixture
+            .scratch
+            .path()
+            .join("data/quotaline/codex-analytics-watermarks.json")
+            .exists()
+    );
+}

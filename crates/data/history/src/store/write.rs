@@ -129,37 +129,37 @@ impl Store {
     ) -> Result<u64> {
         let mut state = self.state();
         let (cutoff, _) = retained_utc_days(fetched_at, state.retention_days);
-        let mut totals = BTreeMap::<(&str, &str, &str), f64>::new();
-        for point in points.iter().filter(|point| point.day >= cutoff) {
-            *totals.entry((&point.day, &point.metric, &point.series)).or_default() += point.value;
-        }
         prune_if_needed(&mut state, fetched_at)?;
         let tx = write(&mut state)?;
         if let Some(fingerprint) = fingerprint {
             account::activate(&tx, provider, fingerprint)?;
         }
-        for scope in scopes {
-            let start = scope.start_day.as_str().max(&cutoff);
-            if start > scope.end_day.as_str() {
-                continue;
-            }
-            for metric in &scope.metrics {
-                tx.execute(
-                    "DELETE FROM analytics WHERE provider=?1 AND metric=?2 AND day>=?3 AND day<=?4",
-                    params![provider, metric, start, scope.end_day],
-                )?;
-            }
-        }
-        {
-            let mut insert = tx.prepare_cached(
-                "INSERT OR REPLACE INTO analytics (provider,day,metric,series,value) VALUES (?1,?2,?3,?4,?5)",
-            )?;
-            for ((day, metric, series), value) in &totals {
-                insert.execute(params![provider, day, metric, series, value])?;
-            }
-        }
+        let recorded = insert_analytics(&tx, provider, &cutoff, points, scopes)?;
         tx.commit()?;
-        Ok(totals.len() as u64)
+        Ok(recorded)
+    }
+
+    pub fn record_current_analytics(
+        &self,
+        provider: &str,
+        fingerprint: Option<&str>,
+        fetched_at: f64,
+        points: &[AnalyticsPoint],
+        scopes: &[CoverageScope],
+    ) -> Result<Option<u64>> {
+        let mut state = self.state();
+        let (cutoff, _) = retained_utc_days(fetched_at, state.retention_days);
+        let tx = write(&mut state)?;
+        if let Some(fingerprint) = fingerprint {
+            if account::active(&tx, provider)?.is_some_and(|active| active != fingerprint) {
+                return Ok(None);
+            }
+            account::activate(&tx, provider, fingerprint)?;
+        }
+        let recorded = insert_analytics(&tx, provider, &cutoff, points, scopes)?;
+        tx.commit()?;
+        prune_if_needed(&mut state, fetched_at)?;
+        Ok(Some(recorded))
     }
 
     pub fn clear(&self) -> Result<u64> {
@@ -182,6 +182,40 @@ impl Store {
             now,
         )
     }
+}
+
+fn insert_analytics(
+    tx: &Transaction<'_>,
+    provider: &str,
+    cutoff: &str,
+    points: &[AnalyticsPoint],
+    scopes: &[CoverageScope],
+) -> Result<u64> {
+    let mut totals = BTreeMap::<(&str, &str, &str), f64>::new();
+    for point in points.iter().filter(|point| point.day.as_str() >= cutoff) {
+        *totals.entry((&point.day, &point.metric, &point.series)).or_default() += point.value;
+    }
+    for scope in scopes {
+        let start = scope.start_day.as_str().max(cutoff);
+        if start > scope.end_day.as_str() {
+            continue;
+        }
+        for metric in &scope.metrics {
+            tx.execute(
+                "DELETE FROM analytics WHERE provider=?1 AND metric=?2 AND day>=?3 AND day<=?4",
+                params![provider, metric, start, scope.end_day],
+            )?;
+        }
+    }
+    {
+        let mut insert = tx.prepare_cached(
+            "INSERT OR REPLACE INTO analytics (provider,day,metric,series,value) VALUES (?1,?2,?3,?4,?5)",
+        )?;
+        for ((day, metric, series), value) in &totals {
+            insert.execute(params![provider, day, metric, series, value])?;
+        }
+    }
+    Ok(totals.len() as u64)
 }
 
 fn prune_if_needed(state: &mut State, now: f64) -> Result<()> {

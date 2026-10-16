@@ -264,9 +264,6 @@ pub fn replace_analytics_into(
     now: f64,
 ) -> Result<()> {
     let Coverage { metrics, start, end } = *coverage;
-    if account_changed(store, provider, fingerprint)? {
-        return Ok(());
-    }
     let points = points
         .iter()
         .filter(|point| {
@@ -282,38 +279,24 @@ pub fn replace_analytics_into(
         end_day: end.into(),
         metrics: metrics.iter().map(|metric| (*metric).into()).collect(),
     };
-    store.record_analytics(provider, fingerprint, now, &points, &[scope])?;
+    store.record_current_analytics(provider, fingerprint, now, &points, &[scope])?;
     Ok(())
 }
 
-pub fn record_snapshot(snapshot: &analytics::AnalyticsSnapshot) -> Result<()> {
+pub fn record_snapshot(snapshot: &analytics::AnalyticsSnapshot) -> Result<bool> {
     record_snapshot_into(&*history_store()?, snapshot)
 }
 
-pub fn record_snapshot_into(store: &Store, snapshot: &analytics::AnalyticsSnapshot) -> Result<()> {
-    let provider = snapshot.provider.as_str();
-    let fingerprint = snapshot.account_fingerprint.as_deref();
-    if account_changed(store, provider, fingerprint)? {
-        return Ok(());
-    }
-    store.record_analytics(
-        provider,
-        fingerprint,
-        snapshot.fetched_at,
-        &snapshot.points,
-        &snapshot.covered_scopes,
-    )?;
-    Ok(())
-}
-
-/// Scheduled analytics have no refresh generation yet, so a slow fetch can finish after the account changed.
-fn account_changed(store: &Store, provider: &str, fingerprint: Option<&str>) -> Result<bool> {
-    let Some(fingerprint) = fingerprint else {
-        return Ok(false);
-    };
+pub fn record_snapshot_into(store: &Store, snapshot: &analytics::AnalyticsSnapshot) -> Result<bool> {
     Ok(store
-        .active_account(provider)?
-        .is_some_and(|active| active != fingerprint))
+        .record_current_analytics(
+            &snapshot.provider,
+            snapshot.account_fingerprint.as_deref(),
+            snapshot.fetched_at,
+            &snapshot.points,
+            &snapshot.covered_scopes,
+        )?
+        .is_some())
 }
 
 pub fn clear() -> Result<()> {

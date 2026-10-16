@@ -254,7 +254,7 @@ fn snapshot(fingerprint: &str, value: f64) -> analytics::AnalyticsSnapshot {
 #[test]
 fn snapshot_activates_its_account_and_records_its_points() {
     let store = Store::open(None, 60).unwrap();
-    record_snapshot_into(&store, &snapshot("active", 7.0)).unwrap();
+    assert!(record_snapshot_into(&store, &snapshot("active", 7.0)).unwrap());
     assert_eq!(store.active_account("codex").unwrap().as_deref(), Some("active"));
     assert_eq!(
         store.analytics("codex", "2026-08-01", "2026-08-01").unwrap()[0].value,
@@ -265,8 +265,8 @@ fn snapshot_activates_its_account_and_records_its_points() {
 #[test]
 fn late_snapshot_from_another_account_keeps_the_active_history() {
     let store = Store::open(None, 60).unwrap();
-    record_snapshot_into(&store, &snapshot("active", 7.0)).unwrap();
-    record_snapshot_into(&store, &snapshot("old", 3.0)).unwrap();
+    assert!(record_snapshot_into(&store, &snapshot("active", 7.0)).unwrap());
+    assert!(!record_snapshot_into(&store, &snapshot("old", 3.0)).unwrap());
     assert_eq!(
         store.analytics("codex", "2026-08-01", "2026-08-01").unwrap()[0].value,
         7.0

@@ -54,11 +54,18 @@ impl App {
     }
 
     fn store_codex_analytics(&self, analytics: providers::CodexAnalytics) {
-        if let Some(snapshot) = &analytics.snapshot
-            && let Err(error) = blocking(|| store::record_snapshot(snapshot))
-        {
-            eprintln!("Codex analytics write failed: {error}");
-            return;
+        if let Some(snapshot) = &analytics.snapshot {
+            match blocking(|| store::record_snapshot(snapshot)) {
+                Ok(true) => {}
+                Ok(false) => {
+                    eprintln!("Codex analytics discarded after account change");
+                    return;
+                }
+                Err(error) => {
+                    eprintln!("Codex analytics write failed: {error}");
+                    return;
+                }
+            }
         }
         if let Some(watermarks) = analytics.watermarks
             && let Err(error) = blocking(|| store::save_codex_watermarks(&watermarks))

@@ -1,4 +1,4 @@
-// The stored choices are applied by an inline script in <body> before paint, so this file only wires the toggles.
+// The stored theme is applied before paint; this file wires the theme button.
 (() => {
   const body = document.body;
   const toggle = document.getElementById('theme-toggle');
@@ -29,22 +29,6 @@
       paintIcon();
     });
   }
-
-  const platforms = document.querySelectorAll('.platform-toggle [data-platform]');
-  const paintPlatform = () => {
-    for (const button of platforms) {
-      button.setAttribute('aria-pressed', String(body.classList.contains(`platform-${button.dataset.platform}`)));
-    }
-  };
-  for (const button of platforms) {
-    button.addEventListener('click', () => {
-      body.classList.remove('platform-macos', 'platform-gnome');
-      body.classList.add(`platform-${button.dataset.platform}`);
-      localStorage.setItem('tmb-platform', button.dataset.platform);
-      paintPlatform();
-    });
-  }
-  paintPlatform();
 
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', paintIcon);
   paintIcon();

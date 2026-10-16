@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-test('site builds with versioned links and platform reference pages', context => {
+test('site builds with versioned links and platform guides', context => {
     const {destination, result} = build(context);
     assert.equal(result.status, 0, result.stderr);
     const start = fs.readFileSync(path.join(destination, 'start/index.html'), 'utf8');
@@ -15,31 +15,45 @@ test('site builds with versioned links and platform reference pages', context =>
     const menuBar = fs.readFileSync(path.join(destination, 'reference/menu-bar/index.html'), 'utf8');
     assert.match(menuBar, /\/en\/preview\/reference\/settings\/menu-bar\/#custom-templates/);
     const home = fs.readFileSync(path.join(destination, 'index.html'), 'utf8');
-    assert.match(home, />Get started<\/a>/);
+    assert.match(home, /Get started<\/a>/);
     assert.doesNotMatch(home, /Build from source<\/a>/);
+    assert.match(home, /href=\/en\/preview\/macos\//);
+    assert.match(home, /href=\/en\/preview\/gnome\//);
+    const navigation = home.match(/<nav class=nav aria-label=Main>(.*?)<\/nav>/s)?.[1];
+    assert.ok(navigation);
+    assert.equal((navigation.match(/<a /g) ?? []).length, (navigation.match(/<svg /g) ?? []).length);
     for (const provider of ['claude', 'codex', 'gemini', 'antigravity', 'cursor', 'copilot']) {
         assert.match(home, new RegExp(`/en/preview/reference/providers/${provider}/`));
         assert.ok(fs.statSync(path.join(destination, `reference/providers/${provider}/index.md`)).size > 0);
     }
-    for (const file of ['llms.txt', 'reference/providers/index.md', 'gnome/index.html']) {
+    for (const file of ['llms.txt', 'reference/providers/index.md', 'gnome/index.html', 'macos/index.html']) {
         assert.ok(fs.statSync(path.join(destination, file)).size > 0);
     }
 });
 
-test('site switches screenshots and steps with the stored desktop choice', context => {
+test('site shows both platform previews without hidden desktop state', context => {
     const {destination, result} = build(context);
     assert.equal(result.status, 0, result.stderr);
     const usage = fs.readFileSync(path.join(destination, 'reference/usage/index.html'), 'utf8');
-    assert.match(usage, /class="?shot only-light only-macos"?/);
-    assert.match(usage, /class="?shot only-gnome"?/);
-    assert.match(usage, /<figcaption class="?only-gnome"?>/);
+    assert.match(usage, /<strong>macOS<\/strong>/);
+    assert.match(usage, /<strong>GNOME<\/strong>/);
     const start = fs.readFileSync(path.join(destination, 'start/index.html'), 'utf8');
-    assert.match(start, /<div class="?only-macos"?>[\s\S]*brew install --cask/);
-    assert.match(start, /<div class="?only-gnome"?>[\s\S]*just install/);
-    assert.match(start, /localStorage\.getItem\("tmb-platform"\)/);
-    assert.match(start, /data-platform="?gnome"?/);
-    const gnome = fs.readFileSync(path.join(destination, 'gnome/index.html'), 'utf8');
-    assert.doesNotMatch(gnome, /only-macos[^-]/);
+    assert.match(start, /Install the app/);
+    assert.match(start, /Install the extension/);
+    assert.doesNotMatch(start, /tmb-platform|data-platform/);
+    const macosInstall = fs.readFileSync(path.join(destination, 'macos/install/index.html'), 'utf8');
+    assert.match(macosInstall, /brew install --cask/);
+    const gnomeInstall = fs.readFileSync(path.join(destination, 'gnome/install/index.html'), 'utf8');
+    assert.match(gnomeInstall, /just install/);
+});
+
+test('site redirects moved platform-only pages', context => {
+    const {destination, result} = build(context);
+    assert.equal(result.status, 0, result.stderr);
+    const widgets = fs.readFileSync(path.join(destination, 'reference/widgets/index.html'), 'utf8');
+    assert.match(widgets, /\/en\/preview\/macos\/widgets\//);
+    const updates = fs.readFileSync(path.join(destination, 'troubleshooting/application/index.html'), 'utf8');
+    assert.match(updates, /\/en\/preview\/macos\/install-troubleshooting\//);
 });
 
 test('site reuses downloaded diagrams without network access', context => {
@@ -51,12 +65,6 @@ test('site reuses downloaded diagrams without network access', context => {
     assert.equal(result.status, 0, result.stderr);
     const providers = fs.readFileSync(path.join(destination, 'contributing/providers/index.html'), 'utf8');
     assert.match(providers, /\/js\/mermaid\.[a-f0-9]+\.js/);
-});
-
-test('site rejects an unknown desktop', context => {
-    const {result} = build(context, '{{< platform windows >}}Text{{< /platform >}}');
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /platform shortcode takes macos or gnome/);
 });
 
 test('site rejects missing GNOME screenshots', context => {

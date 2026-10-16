@@ -1,5 +1,5 @@
 ---
-title: Menu bar settings
+title: Display settings
 description: Model selection, short labels, status formats and template tokens.
 weight: 2
 ---

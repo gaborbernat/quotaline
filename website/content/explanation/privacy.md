@@ -10,16 +10,17 @@ weight: 1
 app reads credentials that supported clients already store. It does not ask for passwords, create a Quotaline account,
 send telemetry or upload crash reports.
 
-Credential reads are noninteractive. If a Keychain item denies access, the app reports that state in provider setup
-without asking macOS to prompt during polling. The App Store sandbox requires grants for supported local resources.
+Credential reads during polling are noninteractive. [macOS credential access](/macos/credentials/) covers Keychain
+prompts and App Store folder grants. [GNOME provider access](/gnome/providers/) lists its Secret Service and file
+sources.
 
-Environment overrides must reach the app process. Finder and login-item launches do not load shell startup exports;
-Settings > Providers shows the credential source and resolved path.
+Environment overrides must reach the running app or service. Settings > Providers shows the credential source and
+resolved path.
 
 ## Local storage and sharing
 
-Direct and Homebrew builds keep history, snapshots and logs under `~/Library/Application Support/Quotaline/`. The App
-Store build uses `~/Library/Containers/tech.bernat.quotaline/Data/Library/Application Support/Quotaline/`.
+History, snapshots, settings and logs stay on your machine. See [macOS storage](/macos/storage/) or the
+[GNOME data locations](/gnome/data/) for paths specific to your frontend.
 
 | Data             | Contents and controls                                                                                                                                                                     |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -27,14 +28,11 @@ Store build uses `~/Library/Containers/tech.bernat.quotaline/Data/Library/Applic
 | Snapshot cache   | Last-known provider readings, including plan and email when reported. It supports offline display and the JSON command.                                                                   |
 | `usage.json`     | Optional quota export for scripts. Contains provider IDs, plans, sample times and quota rows; no credential or email fields. Off by default.                                              |
 | Log files        | Sanitized diagnostics, request metadata and UI events. Detailed logging is off by default. Review a report before sharing it.                                                             |
-| Widget snapshot  | Selected labels, percentages and reset times, without credentials or email. Widgets read it without calling providers.                                                                    |
+| Desktop snapshot | Selected labels, percentages and reset times, without credentials or email. Widgets and the Quick Settings tile read it without calling providers.                                        |
 
 **Hide account and project details** masks display and diagnostic text; it does not erase the underlying cache,
 transcripts or database. Exported files are copies under your control. Resetting preferences is different from clearing
 history and does not sign the provider clients out.
-
-The App Store widget uses the `group.tech.bernat.quotaline` app group. Direct and Homebrew builds use
-`<Team ID>.tech.bernat.quotaline`. The channels do not share widget snapshots.
 
 The network logger records operation, sanitized endpoint, response status, size and duration. It does not log request
 headers or response bodies. Provider errors can still contain identifying details; inspect diagnostics before attaching

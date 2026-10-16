@@ -9,13 +9,6 @@
   --iris-2: #9a6bff;
   --iris: #5a46e8;
   --iris-soft: rgba(90, 70, 232, 0.1);
-  /* Text printed on a solid --iris fill. The dark theme's iris is light enough that white on it is 2.7:1. */
-  --on-iris: #ffffff;
-
-  --usage-green: #258540;
-  --usage-orange: #db7516;
-  --usage-red: #cc1f1f;
-
   --ink: #0f1117;
   --body: #3c4250;
   --muted: #667085;
@@ -52,10 +45,6 @@ body.theme-dark {
   color-scheme: dark;
   --iris: #a78bfa;
   --iris-soft: rgba(167, 139, 250, 0.14);
-  --on-iris: #0f1117;
-  --usage-green: #46b969;
-  --usage-orange: #f0993f;
-  --usage-red: #e8544e;
   --ink: var(--dark-ink);
   --body: var(--dark-body);
   --muted: var(--dark-muted);
@@ -73,10 +62,6 @@ body.theme-dark {
     color-scheme: dark;
     --iris: #a78bfa;
     --iris-soft: rgba(167, 139, 250, 0.14);
-    --on-iris: #0f1117;
-    --usage-green: #46b969;
-    --usage-orange: #f0993f;
-    --usage-red: #e8544e;
     --ink: var(--dark-ink);
     --body: var(--dark-body);
     --muted: var(--dark-muted);
@@ -291,9 +276,16 @@ td {
   background: var(--raised);
 }
 
-.nav a[aria-current="page"] {
+.nav a[aria-current="page"],
+.nav a.section-current {
   color: var(--iris);
   background: var(--iris-soft);
+}
+
+.nav svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
 }
 
 .theme-toggle {
@@ -308,37 +300,6 @@ td {
   align-items: center;
   justify-content: center;
   padding: 0;
-}
-
-.platform-toggle {
-  display: inline-flex;
-  flex: none;
-  margin: 0 0.4rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
-  padding: 2px;
-}
-
-.platform-toggle button {
-  border: 0;
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 560;
-  padding: 3px 10px;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.platform-toggle button:hover {
-  color: var(--ink);
-}
-
-.platform-toggle button[aria-pressed="true"] {
-  color: var(--iris);
-  background: var(--iris-soft);
 }
 
 .theme-toggle:hover {
@@ -388,24 +349,25 @@ td {
 .hero {
   position: relative;
   overflow: hidden;
-  padding: 4rem 0 3rem;
+  padding: clamp(4rem, 8vw, 7rem) 0;
+  background: linear-gradient(145deg, var(--paper), var(--raised));
 }
 
 .hero::before {
   content: "";
   position: absolute;
-  inset: -40% 30% auto -10%;
-  height: 620px;
-  background: radial-gradient(closest-side, rgba(122, 90, 245, 0.22), transparent);
+  inset: -35% -20% auto 20%;
+  height: 700px;
+  background: radial-gradient(closest-side, rgba(122, 90, 245, 0.17), transparent);
   pointer-events: none;
 }
 
-.hero .wrap {
+.hero-grid {
   position: relative;
   display: grid;
-  gap: 2rem;
-  justify-items: start;
-  max-width: 780px;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
 }
 
 .eyebrow {
@@ -424,16 +386,17 @@ td {
 }
 
 .hero h1 {
-  font-size: clamp(2.1rem, 4.4vw, 3.1rem);
-  letter-spacing: -0.032em;
-  font-weight: 700;
-  margin-bottom: 0.9rem;
+  font-size: clamp(3rem, 4.6vw, 4.5rem);
+  letter-spacing: -0.055em;
+  font-weight: 740;
+  margin-bottom: 1.15rem;
 }
 
 .hero .lede {
-  font-size: 1.1rem;
+  font-size: 1.16rem;
   color: var(--muted);
-  margin-bottom: 1.6rem;
+  margin-bottom: 2rem;
+  max-width: 48ch;
 }
 
 .hero-actions {
@@ -444,15 +407,32 @@ td {
 }
 
 .hero-note {
-  margin-top: 0.9rem;
-  font-size: 0.87rem;
+  margin: 1.5rem 0 0;
+  font-size: 0.86rem;
   color: var(--muted);
 }
 
 .hero-media {
-  display: grid;
-  gap: 0.9rem;
-  width: 100%;
+  position: relative;
+  padding: clamp(1rem, 3vw, 2rem);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  box-shadow: var(--shadow-lg);
+}
+
+.hero-image {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.hero-media-label {
+  display: block;
+  margin-top: 0.9rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
 }
 
 .shot {
@@ -465,9 +445,195 @@ td {
   height: auto;
 }
 
+.hero-image .shot {
+  width: 100%;
+}
+
 .shot-bar {
   max-width: 520px;
   border-radius: var(--radius);
+}
+
+.platform-section {
+  padding: 4.5rem 0;
+}
+
+.section-kicker,
+.feature-number,
+.platform-card-label {
+  color: var(--iris);
+  font-size: 0.79rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.section-head h2 {
+  margin-top: 0.6rem;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+}
+
+.platform-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.platform-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--body);
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform var(--transition-duration) ease,
+    box-shadow var(--transition-duration) ease;
+}
+
+.platform-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+}
+
+.platform-card-media {
+  display: grid;
+  place-items: center;
+  height: 215px;
+  padding: 1.5rem;
+  overflow: hidden;
+  background: var(--raised);
+}
+
+.platform-card-macos {
+  background: radial-gradient(circle at 50% 50%, rgba(122, 90, 245, 0.22), transparent 70%), var(--raised);
+}
+
+.platform-card-gnome {
+  background: radial-gradient(circle at 50% 45%, rgba(88, 160, 227, 0.2), transparent 70%), var(--raised);
+}
+
+.platform-card-gnome .shot {
+  max-height: 220px;
+  width: auto;
+  object-fit: cover;
+  object-position: top;
+}
+
+.platform-card-copy {
+  padding: 1.6rem 1.8rem 1.8rem;
+}
+
+.platform-card h3 {
+  margin: 0.5rem 0 0.35rem;
+  font-size: 1.45rem;
+}
+
+.platform-card h2 {
+  margin: 0.5rem 0 0.35rem;
+  font-size: 1.45rem;
+}
+
+.platform-card p {
+  color: var(--muted);
+  margin-bottom: 1.2rem;
+}
+
+.platform-card-action {
+  color: var(--iris);
+  font-weight: 650;
+}
+
+.start-next {
+  max-width: 760px;
+  margin: 3rem auto 0;
+}
+
+.start-next h2 {
+  margin-top: 0;
+}
+
+.start-next li {
+  padding-left: 0.4rem;
+  margin-bottom: 0.7rem;
+}
+
+.platform-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
+  margin-bottom: 3rem;
+}
+
+.platform-overview-image {
+  display: grid;
+  place-items: center;
+  min-height: 300px;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(circle at center, rgba(122, 90, 245, 0.15), transparent 70%), var(--raised);
+}
+
+.platform-overview-image .shot {
+  max-height: 470px;
+  width: auto;
+}
+
+.platform-pages-heading {
+  margin-bottom: 1.3rem;
+}
+
+.feature-cards h3 {
+  margin: 1.4rem 0 0.55rem;
+}
+
+.docs-section {
+  padding: 4.5rem 0;
+  background: var(--raised);
+  border-top: 1px solid var(--line);
+}
+
+.docs-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 3rem;
+}
+
+.docs-grid h2 {
+  margin: 0.6rem 0 1rem;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+}
+
+.docs-grid p {
+  max-width: 45ch;
+  color: var(--muted);
+}
+
+.docs-links a {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0.2rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.docs-links a:hover {
+  color: var(--iris);
+}
+
+.docs-links a span:first-child {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
+
+.docs-links a span:last-child {
+  margin-left: auto;
 }
 
 .provider {
@@ -518,12 +684,20 @@ td {
   gap: 1rem;
 }
 
+.platform-macos .cards {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 1.2rem 1.25rem;
   box-shadow: var(--shadow-sm);
+}
+
+.feature-cards .card {
+  padding: 1.8rem;
 }
 
 .card h2,
@@ -554,121 +728,53 @@ td {
   height: 17px;
 }
 
-/* One popover at a time, switched by the radios above it, so three tall shots do not stack into a scroll marathon */
-.tabshots {
-  display: grid;
-  justify-items: center;
-  gap: 1rem;
-}
-
-.tabshot-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.tabshot-bar {
-  display: inline-flex;
-  gap: 0.25rem;
-  padding: 0.25rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
-}
-
-.tabshot-bar label {
-  padding: 0.4rem 1.15rem;
-  border-radius: 999px;
-  font-size: 0.9rem;
-  font-weight: 560;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.tabshot-bar label:hover {
-  color: var(--ink);
-}
-
-.tabshot-panel {
-  margin: 0;
-  display: none;
-}
-
-/* One tab at a time, each shown whole: no crop, no inner scrollbar */
-.tabshot-frame img {
-  display: block;
-  margin-inline: auto;
-}
-
-.tabshot-panel figcaption {
-  margin-top: 0.7rem;
-  font-size: 0.88rem;
-  color: var(--muted);
-  text-align: center;
-}
-
-#tabshot-usage:checked ~ .tabshot-bar label[for="tabshot-usage"],
-#tabshot-history:checked ~ .tabshot-bar label[for="tabshot-history"],
-#tabshot-settings:checked ~ .tabshot-bar label[for="tabshot-settings"] {
-  background: var(--iris);
-  color: var(--on-iris);
-}
-
-#tabshot-usage:focus-visible ~ .tabshot-bar label[for="tabshot-usage"],
-#tabshot-history:focus-visible ~ .tabshot-bar label[for="tabshot-history"],
-#tabshot-settings:focus-visible ~ .tabshot-bar label[for="tabshot-settings"] {
-  outline: 2px solid var(--iris);
-  outline-offset: 2px;
-}
-
-#tabshot-usage:checked ~ .tabshot-panels #panel-usage,
-#tabshot-history:checked ~ .tabshot-panels #panel-history,
-#tabshot-settings:checked ~ .tabshot-panels #panel-settings {
-  display: block;
-}
-
-/* The usage scale is semantic: green through red maps to the thresholds the site documents */
-
-.legend {
-  display: flex;
-  gap: 0.4rem;
-  align-items: center;
-  flex-wrap: wrap;
-  font-size: 0.88rem;
-  color: var(--muted);
-}
-
-.legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.legend i {
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
-  display: inline-block;
-}
-
-.legend .g {
-  background: var(--usage-green);
-}
-.legend .o {
-  background: var(--usage-orange);
-}
-.legend .r {
-  background: var(--usage-red);
-}
-
 .page {
   padding: 2.6rem 0 3.5rem;
 }
 
 .page .wrap {
   max-width: var(--prose);
+}
+
+.page .doc-layout {
+  max-width: var(--page);
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: clamp(2rem, 4vw, 4rem);
+}
+
+.doc-main {
+  min-width: 0;
+}
+
+.doc-sidebar {
+  position: sticky;
+  top: 95px;
+  align-self: start;
+  display: grid;
+  gap: 0.15rem;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+  font-size: 0.88rem;
+}
+
+.doc-sidebar a {
+  color: var(--muted);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.55rem;
+}
+
+.doc-sidebar a:hover,
+.doc-sidebar a[aria-current="page"] {
+  color: var(--iris);
+  background: var(--iris-soft);
+}
+
+.doc-sidebar .doc-sidebar-title {
+  color: var(--ink);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
 }
 
 .page-wide .wrap {
@@ -683,10 +789,24 @@ td {
   margin-bottom: 0.4rem;
 }
 
+.start-page .page-title {
+  margin-top: 0.6rem;
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+}
+
+.platform-overview .page-title {
+  margin: 0.6rem 0;
+  font-size: clamp(2.5rem, 4vw, 3.8rem);
+}
+
 .page-lede {
   color: var(--muted);
   font-size: 1.04rem;
   margin-bottom: 2rem;
+}
+
+.platform-overview .page-lede {
+  margin-bottom: 1.1rem;
 }
 
 .prose img {
@@ -786,8 +906,7 @@ pre.mermaid svg {
   }
 }
 
-/* Below this the header no longer fits on one line. The brand and the switches take the first row and the links
-   become a side-scrolling strip, so the sticky header stays two rows tall instead of wrapping to three. */
+/* Keep the navigation on a single scrollable row when the header narrows. */
 @media (max-width: 1240px) {
   .masthead .wrap {
     flex-wrap: wrap;
@@ -828,13 +947,49 @@ pre.mermaid svg {
     margin-left: 0.3rem;
   }
 
-  .platform-toggle {
-    margin: 0 0 0 0.3rem;
-  }
-
   .prose h2,
   .prose h3 {
     scroll-margin-top: 6.5rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero-grid,
+  .docs-grid,
+  .platform-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-macos .cards {
+    grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
+  }
+
+  .page .doc-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .doc-sidebar {
+    position: static;
+    display: flex;
+    gap: 0.3rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    max-height: none;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .doc-sidebar .doc-sidebar-title {
+    margin: 0;
+  }
+
+  .hero-copy {
+    max-width: 680px;
+  }
+
+  .hero-media {
+    max-width: 680px;
   }
 }
 
@@ -856,20 +1011,29 @@ pre.mermaid svg {
     padding: 2.4rem 0;
   }
 
+  .hero {
+    padding: 3.5rem 0 2.8rem;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.6rem, 10vw, 3.6rem);
+  }
+
+  .platform-section,
+  .docs-section {
+    padding: 3rem 0;
+  }
+
+  .platform-cards {
+    grid-template-columns: 1fr;
+  }
+
   .page {
     padding: 1.9rem 0 2.8rem;
   }
 
   .providers .wrap {
     gap: 0.5rem 1rem;
-  }
-
-  .tabshot-bar {
-    max-width: 100%;
-  }
-
-  .tabshot-bar label {
-    padding: 0.4rem 0.85rem;
   }
 
   /* Fitted to a 390px column a six-node flowchart's labels fall to a few pixels, so it keeps its size and pans */
@@ -907,6 +1071,23 @@ pre.mermaid svg {
   margin: 1.5rem 0;
 }
 
+.shot-compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  align-items: start;
+  gap: 1.4rem;
+}
+
+.shot-compare .shot-figure {
+  min-width: 0;
+}
+
+.shot-compare .shot {
+  max-height: 500px;
+  width: auto;
+  object-fit: contain;
+}
+
 .shot-figure figcaption {
   margin-top: 0.5rem;
   font-size: 0.88rem;
@@ -914,9 +1095,7 @@ pre.mermaid svg {
 }
 
 body.theme-light .only-dark,
-body.theme-dark .only-light,
-body.platform-macos .only-gnome,
-body.platform-gnome .only-macos {
+body.theme-dark .only-light {
   display: none;
 }
 

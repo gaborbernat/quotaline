@@ -1,0 +1,39 @@
+{{ define "main" }}
+<section class="page page-wide platform-page platform-{{ .Section }}">
+  <div class="wrap">
+    <div class="platform-overview">
+      <div>
+        <span class="section-kicker">Desktop guide</span>
+        <h1 class="page-title">{{ .Title }}</h1>
+        {{ with .Description }}<p class="page-lede">{{ . }}</p>{{ end }}
+        <div class="prose">{{ .Content }}</div>
+      </div>
+      <div class="platform-overview-image">
+        {{ if eq .Section "macos" }}
+          {{ range $variant := (slice "light" "dark") }}
+            {{ with resources.Get (printf "images/popover-usage-%s.webp" $variant) }}
+              {{ partial "shot-image.html" (dict "image" . "scale" 2
+                   "alt" "Quotaline macOS Usage panel" "loading" "lazy"
+                   "class" (printf "shot only-%s" $variant)) }}
+            {{ end }}
+          {{ end }}
+        {{ else }}
+          {{ with resources.Get "images/gnome-usage.webp" }}
+            {{ partial "shot-image.html" (dict "image" . "scale" 2
+                 "alt" "Quotaline GNOME Shell Usage menu" "loading" "lazy" "class" "shot") }}
+          {{ end }}
+        {{ end }}
+      </div>
+    </div>
+    <h2 class="platform-pages-heading">In this guide</h2>
+    <div class="cards">
+      {{ range .Pages.ByWeight }}
+        <a class="card card-link" href="{{ .RelPermalink }}">
+          <h3>{{ .Title }}</h3>
+          <p>{{ .Description | default .Summary }}</p>
+        </a>
+      {{ end }}
+    </div>
+  </div>
+</section>
+{{ end }}

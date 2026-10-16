@@ -32,31 +32,43 @@ mermaidVersion = "12.2.0"
 name = "Get started"
 url = "/start/"
 weight = 1
+[menu.main.params]
+icon = "M4 12h16m-6-6 6 6-6 6"
+
+[[menu.main]]
+name = "Shared"
+url = "/reference/"
+weight = 2
+[menu.main.params]
+icon = "M4 5h7l2 2h7v12H4z"
+
+[[menu.main]]
+name = "macOS"
+url = "/macos/"
+weight = 3
+[menu.main.params]
+icon = "M3 5h18v12H3zM8 21h8m-4-4v4"
 
 [[menu.main]]
 name = "GNOME"
 url = "/gnome/"
-weight = 2
-
-[[menu.main]]
-name = "Reference"
-url = "/reference/"
-weight = 3
-
-[[menu.main]]
-name = "Explanation"
-url = "/explanation/"
 weight = 4
+[menu.main.params]
+icon = "M3 4h18v3H3zM3 9h18v11H3zM7 13h4m-4 3h6"
 
 [[menu.main]]
-name = "Troubleshooting"
+name = "Help"
 url = "/troubleshooting/"
 weight = 5
+[menu.main.params]
+icon = "M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4m0 4h.01M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"
 
 [[menu.main]]
 name = "Contributing"
 url = "/contributing/"
 weight = 6
+[menu.main.params]
+icon = "M8 8l-4 4 4 4m8-8 4 4-4 4m-3-11-2 14"
 
 [outputs]
 home = ["HTML", "llms", "webmanifest"]

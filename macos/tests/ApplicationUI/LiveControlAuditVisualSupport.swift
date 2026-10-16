@@ -107,13 +107,9 @@ extension LiveControlAuditUITests {
     let hasScrollView = scrollView.exists
     let frame = surface.frame
     let viewport = hasScrollView ? scrollView.frame.intersection(frame) : frame
-    let gutter = surface.coordinate(withNormalizedOffset: .zero)
-      .withOffset(CGVector(dx: viewport.minX - frame.minX + 4, dy: viewport.midY - frame.minY))
     let outside = coordinateOutsidePanel(surface, frame: frame)
-    for coordinate in [gutter, outside] {
-      let point = coordinate.screenPoint
-      XCTAssertTrue(point.x.isFinite && point.y.isFinite, "Pointer target must have finite screen coordinates")
-    }
+    let point = outside.screenPoint
+    XCTAssertTrue(point.x.isFinite && point.y.isFinite, "Pointer target must have finite screen coordinates")
     var exposedText: [String] = []
     var previousPage: Set<String> = []
     var checkedBanners = 0
@@ -145,8 +141,7 @@ extension LiveControlAuditUITests {
         break
       }
       previousPage = fingerprint
-      gutter.hover()
-      gutter.scroll(byDeltaX: 0, deltaY: -520)
+      scroll(scrollView, by: -viewport.height * 0.75)
     }
     if tab == "Usage" {
       if checkedBanners == 0 {

@@ -1,0 +1,78 @@
+---
+title: Claude
+description: Claude Code sign-in, session and weekly limits, usage credits and transcript analytics.
+provider: claude
+weight: 1
+---
+
+## Connect
+
+Sign in through Claude Code with `claude auth login`, then enable Claude in **Settings > Providers**. Use **Show all
+providers** if Claude is absent. Check **Authentication** for the source in use.
+
+The app reads Keychain service `Claude Code-credentials`, then `~/.claude/.credentials.json`, which Claude Code writes
+only when the Keychain refuses its sign-in. Local profile and transcript files live under `~/.claude`;
+`CLAUDE_CONFIG_DIR` selects a different root. See [custom credential paths](/start/connect/#custom-credential-paths) for
+Finder and login-item launches.
+
+### What macOS asks
+
+- **Keychain password.** The first read of `Claude Code-credentials` brings up the macOS dialog described under
+  [Keychain access](/start/connect/#keychain-access). Choose **Always Allow**.
+- **The dialog can return.** Claude Code rewrites its Keychain item whenever it renews its sign-in, which can happen
+  several times a day, and the rewrite drops the approval. macOS then asks again on the next read. After **Deny** the
+  app waits 30 minutes before it reads the item again.
+- **App Store build.** Grant `~/.claude` once if you want [History](/reference/history/) token counts and cost
+  estimates; it holds the transcripts. Quota and plan come from the Keychain sign-in without it. See
+  [folder grants](/start/connect/#folder-grants).
+
+## Quota and credits
+
+Usage shows the current session, account-wide weekly and model-specific limits, plus plan and email when reported. An
+exhausted weekly limit marks affected menu bar cells even if you selected a session that has quota left. Reset
+timestamps use local time; exact deadlines include a countdown.
+
+Reported credit details include the cap, spend, balance, reload state and deadlines. A zero credit cap is meaningful.
+Credit balances and quota percentages measure different limits.
+
+The app reads vendor responses, not the browser usage page. Promotional text, billing details or browser-only fields may
+have no equivalent in the API; absent fields do not become zeroes or “not reported” rows.
+
+## History and costs
+
+Claude Code transcripts supply input, output, cached-input and cache-write tokens, API-equivalent costs, messages,
+sessions, tools and project breakdowns. They exclude browser-only activity and work recorded on another Mac.
+
+Costs estimate API pricing for recorded model usage; they are not your subscription bill. Daily records retain UTC day
+buckets. [History](/reference/history/) explains the timezone and metric controls.
+
+The pricing table includes [Opus 5.5 and Sonnet 5.5](https://platform.claude.com/docs/en/about-claude/pricing). Opus 5.5
+costs $4 per million input tokens and $20 per million output tokens; cache reads cost $0.20. Sonnet 5.5 costs $2/$10,
+with $0.20 cache reads. Sonnet 4.5 and Opus 4.5 keep their own prices for historical usage.
+
+Cost estimates use the transcript's
+[cache lifetime](https://platform.claude.com/docs/en/build-with-claude/prompt-caching) and
+[speed](https://platform.claude.com/docs/en/build-with-claude/fast-mode) when present. One-hour cache writes cost 2
+times the input rate, compared with 1.25 times for five-minute writes. Supported Opus Fast mode costs twice the standard
+rate, including caching. A cost that Claude Code reports takes precedence over the estimate. Transcripts without
+cache-lifetime or speed information use five-minute caching and standard speed.
+
+## Expired credentials
+
+Use **Sign in…** to open the detected client's recovery route. Cached quota turns gray until a fetch succeeds; local
+transcript costs have their own freshness. File-access failures offer setup or a resource grant.
+
+**Refresh expired tokens on my behalf** starts off. Enabling it permits OAuth refresh and saving credentials to the
+original source. Rotation can invalidate a token still held by Claude Code; read the
+[shared-token trade-off](/explanation/privacy/#token-refresh).
+
+## Polling and network
+
+The default quota interval is five minutes, with a two-minute floor while the panel is open. Analytics use the separate
+[collection clock](/explanation/collection/).
+
+- Usage and profile: `api.anthropic.com/api/oauth/usage`, `api.anthropic.com/api/oauth/profile`.
+- Optional token refresh: `platform.claude.com/v1/oauth/token`.
+
+These vendor APIs can change. [Diagnostics](/troubleshooting/diagnostics/) describes what to include in a failure
+report.

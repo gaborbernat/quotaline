@@ -1,0 +1,31 @@
+{{- /* A macOS screenshot in light and dark (name), a GNOME one (gnome), or both: with both, the reader's
+       desktop choice in the header picks which shows. GNOME captures come from the Shell's one theme. */ -}}
+{{- $name := .Get "name" -}}
+{{- $gnome := .Get "gnome" -}}
+{{- $alt := .Get "alt" | default "" -}}
+{{- $scale := int (.Get "scale" | default 2) -}}
+{{- $both := and $name $gnome -}}
+<figure class="shot-figure">
+  {{- with $name -}}
+    {{- range $variant := (slice "light" "dark") -}}
+      {{- with resources.Get (printf "images/%s-%s.webp" $name $variant) -}}
+        {{- partial "shot-image.html" (dict
+              "image" . "scale" $scale "alt" $alt "loading" "lazy"
+              "class" (printf "shot only-%s%s" $variant (cond $both " only-macos" ""))) -}}
+      {{- else -}}
+        {{- errorf "Missing screenshot images/%s-%s.webp" $name $variant -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- with $gnome -}}
+    {{- with resources.Get (printf "images/%s.webp" .) -}}
+      {{- partial "shot-image.html" (dict
+            "image" . "scale" ($.Get "gnome-scale" | default 1 | int) "alt" ($.Get "gnome-alt" | default $alt)
+            "loading" "lazy" "class" (cond $both "shot only-gnome" "shot")) -}}
+    {{- else -}}
+      {{- errorf "Missing screenshot images/%s.webp" $gnome -}}
+    {{- end -}}
+  {{- end -}}
+  {{- with .Get "caption" }}<figcaption{{ if $both }} class="only-macos"{{ end }}>{{ . }}</figcaption>{{ end -}}
+  {{- with .Get "gnome-caption" }}<figcaption{{ if $both }} class="only-gnome"{{ end }}>{{ . }}</figcaption>{{ end -}}
+</figure>

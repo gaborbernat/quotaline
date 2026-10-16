@@ -1,0 +1,6 @@
+{
+  "countdown": [[0, "reset due"], [-5, "reset due"], [30, "< 1 min"], [125, "2 min"], [9000, "2 hr 30 min"], [97200, "1d 3h"]],
+  "compact_countdown": [[-5, "0m"], [59, "0m"], [125, "2m"], [3900, "1h05m"], [176400, "2d1h"]],
+  "remaining": [[-10, "1 min"], [30, "1 min"], [7259, "2 h"], [172805, "2 d"]],
+  "relative_age": [[-1, "just now"], [4.9, "just now"], [42, "42s ago"], [125, "2 min ago"], [7300, "2 hr ago"], [259200, "3 d ago"]]
+}

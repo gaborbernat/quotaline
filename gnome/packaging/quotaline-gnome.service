@@ -1,0 +1,13 @@
+[Unit]
+Description=Quotaline quota service
+After=graphical-session.target
+
+[Service]
+Type=dbus
+BusName=tech.bernat.Quotaline.Gnome
+ExecStart=%h/.local/libexec/quotaline-gnome
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

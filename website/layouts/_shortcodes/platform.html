@@ -1,0 +1,8 @@
+{{- /* Content for one desktop, shown when the reader picks it in the header: {{< platform macos >}}…{{< /platform >}}. */ -}}
+{{- $platform := .Get 0 -}}
+{{- if not (in (slice "macos" "gnome") $platform) -}}
+  {{- errorf "platform shortcode takes macos or gnome, got %q" $platform -}}
+{{- end -}}
+<div class="only-{{ $platform }}">
+{{ .Inner | .Page.RenderString (dict "display" "block") }}
+</div>

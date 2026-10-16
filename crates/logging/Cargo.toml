@@ -1,0 +1,11 @@
+[package]
+name = "quotaline-logging"
+version = "0.1.8"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+regex-lite = "0.1.9"
+thiserror = "2"
+url = "2.5.8"

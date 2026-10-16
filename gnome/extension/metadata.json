@@ -1,0 +1,7 @@
+{
+    "uuid": "quotaline@bernat.tech",
+    "name": "Quotaline",
+    "description": "AI coding quota and history in the GNOME panel. Requires the local Quotaline service. Copy diagnostics to the clipboard from the menu footer.",
+    "shell-version": ["50"],
+    "url": "https://github.com/quotaline/quotaline"
+}

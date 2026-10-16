@@ -1,0 +1,30 @@
+[package]
+name = "quotaline-macos-platform"
+version = "0.1.8"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+quotaline-antigravity = { version = "0.1.8", path = "../../crates/providers/antigravity" }
+quotaline-catalog = { version = "0.1.8", path = "../../crates/catalog" }
+quotaline-credentials = { version = "0.1.8", path = "../../crates/accounts/credentials" }
+quotaline-quota = { version = "0.1.8", path = "../../crates/presentation/quota" }
+quotaline-status-bar = { version = "0.1.8", path = "../../crates/presentation/status-bar" }
+quotaline-credential-sources = { version = "0.1.8", path = "../../crates/accounts/credential-sources" }
+quotaline-storage = { version = "0.1.8", path = "../../crates/data/storage" }
+thiserror = "2"
+unicode-segmentation = "1.13.3"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10.1"
+libc = "0.2.190"
+libproc = "0.14.11"
+objc2 = "0.6"
+objc2-local-authentication = { version = "0.3.2", features = ["LAContext"] }
+security-framework = "3.7"
+security-framework-sys = "2.17"
+
+[dev-dependencies]
+mockall = "0.15"
+serde_json = "1"
+tempfile = "3"

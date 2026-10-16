@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=tech.bernat.Quotaline.Gnome
+Exec=@BIN@
+SystemdService=quotaline-gnome.service

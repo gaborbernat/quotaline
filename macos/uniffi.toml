@@ -1,0 +1,3 @@
+# The shared crates' bindings compile into the one QuotalineRust module, so every crate imports the same FFI module.
+[defaults.bindings.swift]
+ffi_module_name = "quotaline_macos_ffiFFI"

@@ -1,0 +1,47 @@
+# Keep formatting and naming in swift format.
+only_rules:
+  - blanket_disable_command
+  - class_delegate_protocol
+  - comment_spacing
+  - compiler_protocol_init
+  - deployment_target
+  - discouraged_direct_init
+  - duplicate_conditions
+  - duplicate_enum_cases
+  - duplicated_key_in_dictionary_literal
+  - dynamic_inline
+  - invalid_swiftlint_command
+  - invisible_character
+  - mark
+  - non_optional_string_data_conversion
+  - notification_center_detachment
+  - ns_number_init_as_function_reference
+  - nsobject_prefer_isequal
+  - orphaned_doc_comment
+  - private_unit_test
+  - reduce_boolean
+  - redundant_sendable
+  - self_in_property_initialization
+  - superfluous_disable_command
+  - todo
+  - unneeded_override
+  - unused_closure_parameter
+  - unused_control_flow_label
+  - unused_setter_value
+  - valid_ibinspectable
+included:
+  - src/Quotaline
+  - src/QuotalineApp
+  - src/QuotalineCore
+  - src/QuotalineUI
+  - src/QuotalineWidgetApp
+  - src/QuotalineWidgets
+  - tests
+  - App
+  - adapter/tests
+  - Package.swift
+excluded:
+  - src/QuotalineRust
+  - Generated
+  - .build
+cache_path: ../target/cache/swiftlint

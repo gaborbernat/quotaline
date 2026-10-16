@@ -1,0 +1,500 @@
+import Foundation
+import QuotalineTestSupport
+import Security
+import Testing
+
+@testable import QuotalineCore
+
+@Test func claudeCredentialsParseKeychainDocument() {
+  let credentials = ClaudeOAuthCredentials(document: Fixtures.json("claude_keychain"))!
+  #expect(credentials.accessToken == "sk-ant-oat01-EXAMPLE")
+  #expect(credentials.refreshToken == "sk-ant-ort01-EXAMPLE")
+  #expect(credentials.expiresAt == Date(timeIntervalSince1970: 1_788_039_901.877))
+  #expect(credentials.hasProfileScope)
+  #expect(credentials.subscriptionType == "max")
+  #expect(credentials.rateLimitTier == "default_claude_max_20x")
+  #expect(
+    credentials.health(now: fixedNow, source: ProviderID.claude.setup.credentialSources[0])
+      == .signedIn(.claude, expiresAt: credentials.expiresAt))
+  #expect(
+    credentials.health(now: fixedNow.addingTimeInterval(20000), source: ProviderID.claude.setup.credentialSources[0])
+      == .expiredSignIn(.claude, at: credentials.expiresAt!))
+}
+
+@Test func claudeCredentialsRejectDocumentsWithoutToken() {
+  #expect(ClaudeOAuthCredentials(document: .object(["mcpOAuth": .object([:])])) == nil)
+  #expect(ClaudeOAuthCredentials(document: .object(["claudeAiOauth": .object(["scopes": .array([])])])) == nil)
+}
+
+@Test func claudeCredentialsDefaultToNoScopesWhenTheDocumentOmitsThem() throws {
+  let document = JSONValue.object(["claudeAiOauth": .object(["accessToken": .string("token")])])
+  let credentials = try #require(ClaudeOAuthCredentials(document: document))
+
+  #expect(credentials.scopes.isEmpty)
+  #expect(!credentials.hasProfileScope)
+}
+
+@Test func claudeCredentialsRefreshPreservesUnknownKeys() {
+  let document = Fixtures.json("claude_keychain").merging("mcpOAuth", .object(["x": .number(1)]))
+  let credentials = ClaudeOAuthCredentials(document: document)!
+  let refreshed = credentials.refreshed(accessToken: "new", refreshToken: "newer", expiresIn: 3600, now: fixedNow)
+  #expect(refreshed.accessToken == "new")
+  #expect(refreshed.refreshToken == "newer")
+  #expect(refreshed.expiresAt == fixedNow.addingTimeInterval(3600))
+  #expect(refreshed.document["mcpOAuth"] == .object(["x": .number(1)]))
+  #expect(refreshed.rateLimitTier == "default_claude_max_20x")
+  let keepRefresh = credentials.refreshed(accessToken: "n", refreshToken: nil, expiresIn: 1, now: fixedNow)
+  #expect(keepRefresh.refreshToken == "sk-ant-ort01-EXAMPLE")
+}
+
+@Test func claudeCredentialsConvenienceInit() {
+  let credentials = ClaudeOAuthCredentials(
+    accessToken: "a", refreshToken: "r", expiresAt: fixedNow, subscriptionType: "pro", rateLimitTier: nil)
+  #expect(
+    credentials.document["claudeAiOauth"]?["expiresAt"]?.doubleValue
+      == (fixedNow.timeIntervalSince1970 * 1000).rounded())
+  #expect(credentials.scopes == ["user:profile"])
+  #expect(ClaudeOAuthCredentials(accessToken: "a", refreshToken: nil, expiresAt: nil).expiresAt == nil)
+}
+
+@Test func claudeKeychainServiceNameHashesConfigDir() {
+  #expect(ClaudeOAuthCredentials.keychainService(configDir: nil) == "Claude Code-credentials")
+  #expect(ClaudeOAuthCredentials.keychainService(configDir: "") == "Claude Code-credentials")
+  let hashed = ClaudeOAuthCredentials.keychainService(configDir: "/Users/me/.claude-work")
+  #expect(hashed.hasPrefix("Claude Code-credentials-"))
+  #expect(hashed.count == "Claude Code-credentials-".count + 8)
+}
+
+@Test func keychainParseRejectsNonJSON() throws {
+  #expect(throws: CredentialStoreError.malformed("Keychain item is not JSON")) {
+    try KeychainClaudeCredentialStore.parse(Data("nope".utf8))
+  }
+  #expect(
+    try KeychainClaudeCredentialStore.parse(Fixtures.data("claude_keychain")).accessToken == "sk-ant-oat01-EXAMPLE")
+  #expect(
+    KeychainClaudeCredentialStore(account: "me", keychain: .empty).description
+      == "Keychain item Claude Code-credentials")
+}
+
+@Test func keychainStoreReadsAndWritesInMemoryCredentials() throws {
+  let keychain = MemoryKeychain()
+  let store = KeychainClaudeCredentialStore(service: "claude-test", account: "tests", keychain: keychain.client)
+  #expect(try store.load() == nil)
+  let credentials = ClaudeOAuthCredentials(accessToken: "first", refreshToken: nil, expiresAt: nil)
+  try store.save(credentials)
+  #expect(try store.load()?.accessToken == "first")
+  try store.save(ClaudeOAuthCredentials(accessToken: "second", refreshToken: nil, expiresAt: nil))
+  #expect(try store.load()?.accessToken == "second")
+}
+
+@Test func keychainClientAddsUpdatesAndFindsAnAccountInMemory() throws {
+  let client = MemoryKeychain().client
+
+  #expect(try client.load(service: "test", account: "account") == nil)
+  try client.save(Data("first".utf8), service: "test", account: "account")
+  #expect(try client.load(service: "test", account: "account")?.data == Data("first".utf8))
+  #expect(try client.load(service: "test")?.account == "account")
+  try client.save(Data("second".utf8), service: "test", account: "account")
+  #expect(try client.load(service: "test", account: "account")?.data == Data("second".utf8))
+}
+
+@Test(arguments: [errSecAuthFailed, errSecUserCanceled, errSecInteractionNotAllowed])
+func keychainClientSkipsReadsForThirtyMinutesAfterADenial(status: OSStatus) throws {
+  let box = DateBox(fixedNow)
+  let reads = ReadCounter()
+  let client = KeychainCredentialClient(
+    load: { _, _ in
+      reads.increment()
+      throw CredentialStoreError.keychain(status)
+    }, save: { _, _, _ in }
+  ).cachingDenials(clock: box.clock)
+
+  #expect(throws: CredentialStoreError.keychain(status)) { try client.load(service: "svc", account: "me") }
+  #expect(throws: CredentialStoreError.keychain(status)) { try client.load(service: "svc", account: "me") }
+  #expect(reads.count == 1)
+  #expect(throws: CredentialStoreError.keychain(status)) { try client.load(service: "svc", account: "other") }
+  #expect(reads.count == 2)
+  box.date = fixedNow.addingTimeInterval(KeychainCredentialClient.denialCacheInterval)
+  #expect(throws: CredentialStoreError.keychain(status)) { try client.load(service: "svc", account: "me") }
+  #expect(reads.count == 3)
+}
+
+@Test(arguments: [("first", 3), ("unrelated", 2)])
+func explicitKeychainRetryClearsOnlyTheRequestedService(prefix: String, expectedReads: Int) {
+  let reads = ReadCounter()
+  let client = KeychainCredentialClient(
+    load: { _, _ in
+      reads.increment()
+      throw CredentialStoreError.keychain(errSecAuthFailed)
+    }, save: { _, _, _ in }
+  ).cachingDenials(clock: testClock)
+  for service in ["first", "second"] { _ = try? client.load(service: service) }
+  client.retryDeniedReads(service: prefix, includingVariants: true)
+  for service in ["first", "second"] { _ = try? client.load(service: service) }
+  #expect(reads.count == expectedReads)
+}
+
+@Test func keychainClientRetriesOtherReadFailuresImmediately() throws {
+  let reads = ReadCounter()
+  let client = KeychainCredentialClient(
+    load: { _, _ in
+      reads.increment()
+      throw CredentialStoreError.keychain(errSecNotAvailable)
+    }, save: { _, _, _ in }
+  ).cachingDenials(clock: testClock)
+
+  #expect(throws: CredentialStoreError.keychain(errSecNotAvailable)) { try client.load(service: "svc", account: "me") }
+  #expect(throws: CredentialStoreError.keychain(errSecNotAvailable)) { try client.load(service: "svc", account: "me") }
+  #expect(reads.count == 2)
+}
+
+@Test func antigravityRetryPreservesTheGeminiDenialCache() {
+  let reads = ReadCounter()
+  let client = KeychainCredentialClient(
+    load: { _, _ in
+      reads.increment()
+      throw CredentialStoreError.keychain(errSecAuthFailed)
+    }, save: { _, _, _ in }
+  ).cachingDenials(clock: testClock)
+  for service in ["gemini", "gemini-cli-oauth"] { _ = try? client.load(service: service) }
+  client.retryDeniedReads(service: "gemini")
+  for service in ["gemini", "gemini-cli-oauth"] { _ = try? client.load(service: service) }
+  #expect(reads.count == 3)
+}
+
+@Test func keychainClientCachingDenialsStillRoundTripsItems() throws {
+  let client = MemoryKeychain().client.cachingDenials(clock: testClock)
+
+  try client.save(Data("secret".utf8), service: "svc", account: "me")
+
+  #expect(try client.load(service: "svc", account: "me")?.data == Data("secret".utf8))
+  #expect(try client.services(prefix: "svc") == ["svc"])
+}
+
+@Test func keychainClientListsServicesByPrefixWithoutDuplicates() throws {
+  let keychain = MemoryKeychain()
+  try keychain.client.save(Data("a".utf8), service: "Claude Code-credentials", account: "me")
+  try keychain.client.save(Data("b".utf8), service: "Claude Code-credentials-1a2b3c4d", account: "me")
+  try keychain.client.save(Data("c".utf8), service: "Claude Code-credentials-1a2b3c4d", account: "other")
+  try keychain.client.save(Data("d".utf8), service: "Codex Auth", account: "me")
+
+  #expect(
+    try keychain.client.services(prefix: "Claude Code-credentials")
+      == ["Claude Code-credentials", "Claude Code-credentials-1a2b3c4d"])
+  #expect(try KeychainCredentialClient(load: { _, _ in nil }, save: { _, _, _ in }).services(prefix: "Claude") == [])
+}
+
+@Test(arguments: [errSecAuthFailed, errSecUserCanceled, errSecInteractionNotAllowed])
+func deniedKeychainReadsReportTheDenialInsteadOfAMissingSignIn(status: OSStatus) {
+  let client = KeychainCredentialClient(
+    load: { _, _ in throw CredentialStoreError.keychain(status) }, save: { _, _, _ in })
+  let store = KeychainClaudeCredentialStore(account: "me", keychain: client)
+
+  #expect(
+    store.credentialHealth(now: fixedNow)
+      == .unreadable(
+        source: store.source, detail: "Keychain access denied; allow it in Keychain Access or sign in again."))
+}
+
+private final class ReadCounter: @unchecked Sendable {
+  private let lock = NSLock()
+  private var value = 0
+
+  var count: Int { lock.withLock { value } }
+
+  func increment() {
+    lock.withLock { value += 1 }
+  }
+}
+
+@Test func fileClaudeStoreRoundTripsAndRejectsGarbage() throws {
+  let directory = temporaryDirectory()
+  let store = FileClaudeCredentialStore(url: directory.appendingPathComponent(".credentials.json"))
+  #expect(try store.load() == nil)
+  #expect(store.description == store.url.path)
+  try store.save(ClaudeOAuthCredentials(accessToken: "tok", refreshToken: nil, expiresAt: nil))
+  #expect(try store.load()?.accessToken == "tok")
+  try Data("{".utf8).write(to: store.url)
+  #expect(throws: CredentialStoreError.malformed(".credentials.json is not JSON")) { try store.load() }
+}
+
+@Test(arguments: ["claude", "codex", "gemini"])
+func credentialFileSavePreservesSymlinksAndOwnerOnlyPermissions(kindName: String) throws {
+  let kind = try #require(CredentialFileKind(rawValue: kindName))
+  let directory = temporaryDirectory()
+  let target = directory.appendingPathComponent("stored.json")
+  let link = directory.appendingPathComponent("credentials.json")
+  try kind.save(token: "old", to: target)
+  try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
+
+  try kind.save(token: "updated", to: link)
+
+  #expect(try FileManager.default.destinationOfSymbolicLink(atPath: link.path) == target.path)
+  #expect(try kind.token(at: target) == "updated")
+  let attributes = try FileManager.default.attributesOfItem(atPath: target.path)
+  #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600)
+}
+
+@Test func chainedClaudeStorePrefersFirstHitAndSavesWhereFound() throws {
+  let directory = temporaryDirectory()
+  let empty = FileClaudeCredentialStore(url: directory.appendingPathComponent("empty.json"))
+  let filled = FileClaudeCredentialStore(url: directory.appendingPathComponent("filled.json"))
+  try filled.save(ClaudeOAuthCredentials(accessToken: "filled", refreshToken: nil, expiresAt: nil))
+  let chain = ChainedClaudeCredentialStore([empty, filled])
+  #expect(chain.description == "\(empty.url.path), \(filled.url.path)")
+  #expect(try chain.load()?.accessToken == "filled")
+  try chain.save(ClaudeOAuthCredentials(accessToken: "updated", refreshToken: nil, expiresAt: nil))
+  #expect(try filled.load()?.accessToken == "updated")
+  #expect(try empty.load() == nil)
+  let broken = FileClaudeCredentialStore(url: directory.appendingPathComponent("broken.json"))
+  try Data("{".utf8).write(to: broken.url)
+  #expect(throws: CredentialReadFailure.self) { try ChainedClaudeCredentialStore([broken, empty]).load() }
+  #expect(try ChainedClaudeCredentialStore([broken, filled]).load()?.accessToken == "updated")
+  let onlyEmpty = ChainedClaudeCredentialStore([empty])
+  try onlyEmpty.save(ClaudeOAuthCredentials(accessToken: "fresh", refreshToken: nil, expiresAt: nil))
+  #expect(try empty.load()?.accessToken == "fresh")
+  #expect(try ChainedClaudeCredentialStore([]).load() == nil)
+  try ChainedClaudeCredentialStore([]).save(ClaudeOAuthCredentials(accessToken: "x", refreshToken: nil, expiresAt: nil))
+}
+
+@Test func codexAuthParsesTokensAndClaims() {
+  let auth = CodexAuth(document: Fixtures.codexAuth())!
+  #expect(auth.accessToken == "ACCESS-EXAMPLE")
+  #expect(auth.refreshToken == "REFRESH-EXAMPLE")
+  #expect(auth.accountID == "00000000-0000-4000-8000-000000000000")
+  #expect(auth.claims?["email"]?.stringValue == "user@example.com")
+  #expect(auth.email == "user@example.com")
+  #expect(auth.planType == "pro")
+  #expect(auth.subscriptionActiveUntil == ISODate.parse("2026-07-23T19:57:23+00:00"))
+  #expect(auth.lastRefresh == ISODate.parse("2026-08-28T19:59:48.413665Z"))
+  #expect(auth.apiKey == nil)
+  #expect(auth.health(now: fixedNow, source: ProviderID.codex.setup.credentialSources[0]) == .signedIn(.codex))
+}
+
+@Test func codexAuthFallsBackToAPIKeyAndClaimAccount() {
+  let claims = JWT.payload(CodexAuth(document: Fixtures.codexAuth())!.idToken!)!
+  let idToken = makeJWT(claims)
+  let auth = CodexAuth(
+    document: .object(["OPENAI_API_KEY": .string("sk-key"), "tokens": .object(["id_token": .string(idToken)])]))!
+  #expect(auth.accessToken == "sk-key")
+  #expect(auth.accountID == claims["https://api.openai.com/auth"]?["chatgpt_account_id"]?.stringValue)
+  #expect(CodexAuth(document: .object(["tokens": .object([:])])) == nil)
+  #expect(CodexAuth(document: .object(["OPENAI_API_KEY": .null])) == nil)
+}
+
+@Test func codexAuthExpiryComesFromAccessTokenJWT() {
+  let auth = CodexAuth(accessToken: makeJWT(.object(["exp": .number(fixedNow.timeIntervalSince1970 + 60)])))
+  #expect(
+    auth.health(now: fixedNow, source: ProviderID.codex.setup.credentialSources[0])
+      == .expiredSignIn(.codex, at: Date(timeIntervalSince1970: fixedNow.timeIntervalSince1970 + 60)))
+  #expect(auth.claims == nil)
+  #expect(auth.email == nil)
+  #expect(auth.planType == nil)
+  #expect(auth.subscriptionActiveUntil == nil)
+}
+
+@Test func codexAuthRefreshedPreservesUnknownKeysAndStampsTime() {
+  let document = Fixtures.codexAuth().merging("custom", .bool(true))
+  let auth = CodexAuth(document: document)!
+  let refreshed = auth.refreshed(accessToken: "A2", refreshToken: nil, idToken: nil, now: fixedNow)
+  #expect(refreshed.accessToken == "A2")
+  #expect(refreshed.refreshToken == "REFRESH-EXAMPLE")
+  #expect(refreshed.idToken == auth.idToken)
+  #expect(refreshed.lastRefresh == Date(timeIntervalSince1970: fixedNow.timeIntervalSince1970.rounded(.down)))
+  #expect(refreshed.document["custom"] == .bool(true))
+  let full = auth.refreshed(accessToken: "A3", refreshToken: "R3", idToken: "I3", now: fixedNow)
+  #expect(full.refreshToken == "R3")
+  #expect(full.idToken == "I3")
+}
+
+@Test func codexAuthConvenienceInit() {
+  let auth = CodexAuth(accessToken: "a", refreshToken: "r", idToken: nil, accountID: "acct", lastRefresh: fixedNow)
+  #expect(auth.accountID == "acct")
+  #expect(auth.document["auth_mode"]?.stringValue == "chatgpt")
+  #expect(auth.lastRefresh == Date(timeIntervalSince1970: fixedNow.timeIntervalSince1970.rounded(.down)))
+}
+
+@Test func fileCodexStoreRoundTripsAndDefaultsLocation() throws {
+  let store = FileCodexAuthStore(url: temporaryDirectory().appendingPathComponent("auth.json"))
+  #expect(try store.load() == nil)
+  #expect(store.description == store.url.path)
+  try store.save(CodexAuth(accessToken: "tok"))
+  #expect(try store.load()?.accessToken == "tok")
+  try Data("nope".utf8).write(to: store.url)
+  #expect(throws: CredentialStoreError.malformed("auth.json is not JSON")) { try store.load() }
+}
+
+@Test func codexKeychainStoreRoundTripsInMemoryCredentials() throws {
+  #expect(KeychainCodexAuthStore(account: "public-tests", keychain: .empty).account == "public-tests")
+  let store = KeychainCodexAuthStore(account: "tests", keychain: MemoryKeychain().client)
+
+  #expect(store.source == ProviderID.codex.credentialSource("codex.keyring"))
+  #expect(try store.load() == nil)
+  try store.save(CodexAuth(accessToken: "first"))
+  #expect(try store.load()?.accessToken == "first")
+  try store.save(CodexAuth(accessToken: "second"))
+  #expect(try store.load()?.accessToken == "second")
+}
+
+@Test func codexChainSavesToTheExistingStoreOrFirstFallback() throws {
+  let directory = temporaryDirectory()
+  let empty = FileCodexAuthStore(url: directory.appendingPathComponent("empty.json"))
+  let filled = FileCodexAuthStore(url: directory.appendingPathComponent("filled.json"))
+  try filled.save(CodexAuth(accessToken: "existing"))
+
+  try ChainedCodexAuthStore([empty, filled]).save(CodexAuth(accessToken: "updated"))
+  #expect(try empty.load() == nil)
+  #expect(try filled.load()?.accessToken == "updated")
+
+  try ChainedCodexAuthStore([empty]).save(CodexAuth(accessToken: "fallback"))
+  #expect(try empty.load()?.accessToken == "fallback")
+  try ChainedCodexAuthStore([]).save(CodexAuth(accessToken: "ignored"))
+}
+
+@Test func codexCredentialStorageLoadsReadableConfiguration() throws {
+  let url = temporaryDirectory().appendingPathComponent("config.toml")
+  #expect(CodexCredentialStorageReader.load(from: url) == .automatic)
+  try Data("cli_auth_credentials_store = 'keyring'".utf8).write(to: url)
+  #expect(CodexCredentialStorageReader.load(from: url) == .keyring)
+}
+
+@Test func concreteCredentialStoresIdentifyTheirSources() {
+  let directory = temporaryDirectory()
+  #expect(KeychainClaudeCredentialStore(account: "tests", keychain: .empty).source.id == "claude.keychain")
+  #expect(
+    DiscoveredCursorAuthStore(
+      stateURL: directory.appendingPathComponent("state.vscdb"),
+      agentURL: directory.appendingPathComponent("auth.json")
+    ).source.id == "cursor.automatic")
+  #expect(KeychainGeminiAuthStore(keychain: .empty).source.id == "gemini.keychain")
+  #expect(KeychainGeminiAuthStore(keychain: .empty).description == "Keychain item gemini-cli-oauth")
+  #expect(
+    DiscoveredCopilotAuthStore(
+      environment: [:], cliURL: directory.appendingPathComponent("config.json"), legacyURLs: [], keychain: .empty
+    ).source.id == "copilot.automatic")
+}
+
+@Test func cursorCredentialHealthReportsAReadableSession() {
+  let store = MemoryCursorStore(CursorAuth(accessToken: "token"))
+  #expect(store.credentialHealth(now: fixedNow) == .valid(source: store.source, expiresAt: nil))
+}
+
+@Test func geminiKeychainFormatsFlatCredentialsAndRejectsMalformedData() throws {
+  let auth = GeminiAuth(
+    accessToken: "access", refreshToken: "refresh", idToken: "identity", expiresAt: fixedNow)
+  let document = KeychainGeminiAuthStore.document(for: auth, updatedAt: fixedNow)
+  #expect(document["serverName"] == .string("main-account"))
+  #expect(document["token"]?["accessToken"] == .string("access"))
+  #expect(document["token"]?["refreshToken"] == .string("refresh"))
+  #expect(document["token"]?["idToken"] == .string("identity"))
+  #expect(document["token"]?["expiresAt"] == .number(fixedNow.timeIntervalSince1970 * 1000))
+  #expect(document["updatedAt"] == .number(fixedNow.timeIntervalSince1970 * 1000))
+  #expect(throws: CredentialStoreError.malformed("Gemini Keychain item is not JSON")) {
+    try KeychainGeminiAuthStore.parse(Data("not-json".utf8))
+  }
+}
+
+@Test func geminiKeychainStoreRoundTripsInMemoryCredentials() throws {
+  let store = KeychainGeminiAuthStore(service: "gemini-test", keychain: MemoryKeychain().client)
+
+  #expect(try store.load() == nil)
+  try store.save(GeminiAuth(accessToken: "first", refreshToken: "refresh"))
+  #expect(try store.load()?.accessToken == "first")
+  try store.save(GeminiAuth(accessToken: "second", refreshToken: "refresh"))
+  #expect(try store.load()?.accessToken == "second")
+}
+
+@Test func geminiChainLoadsAndSavesThroughItsAvailableStore() throws {
+  let directory = temporaryDirectory()
+  let empty = FileGeminiAuthStore(url: directory.appendingPathComponent("empty.json"))
+  let filled = FileGeminiAuthStore(url: directory.appendingPathComponent("filled.json"))
+  try filled.save(GeminiAuth(accessToken: "existing"))
+  let chain = ChainedGeminiAuthStore([empty, filled])
+  #expect(chain.description == "\(empty.url.path), \(filled.url.path)")
+  #expect(try chain.load()?.accessToken == "existing")
+
+  try chain.save(GeminiAuth(accessToken: "updated"))
+  #expect(try filled.load()?.accessToken == "updated")
+  #expect(try empty.load() == nil)
+  try ChainedGeminiAuthStore([empty]).save(GeminiAuth(accessToken: "fallback"))
+  #expect(try empty.load()?.accessToken == "fallback")
+  #expect(try ChainedGeminiAuthStore([]).load() == nil)
+  try ChainedGeminiAuthStore([]).save(GeminiAuth(accessToken: "ignored"))
+}
+
+@Test func jwtPayloadHandlesMalformedTokens() {
+  #expect(JWT.payload("abc") == nil)
+  #expect(JWT.payload("a.!!!.c") == nil)
+  #expect(JWT.payload("a.bm90anNvbg.c") == nil)
+  #expect(JWT.expiry(makeJWT(.object(["exp": .number(10)]))) == Date(timeIntervalSince1970: 10))
+  #expect(JWT.expiry(makeJWT(.object(["sub": .string("x")]))) == nil)
+}
+
+@Test func credentialHealthDescriptions() {
+  #expect(ProviderCredentialHealth.unchecked.description == ProviderCredentialHealth.uncheckedLabel)
+  #expect(ProviderCredentialHealth.notFoundForTests.description == "No credentials")
+  #expect(ProviderCredentialHealth.unreadable(source: nil, detail: "nothing").description == "No credentials: nothing")
+  #expect(ProviderCredentialHealth.signedIn(.claude).description == "Token present")
+  #expect(ProviderCredentialHealth.signedIn(.claude, expiresAt: fixedNow).description.hasPrefix("Token valid until"))
+  #expect(ProviderCredentialHealth.expiredSignIn(.claude, at: fixedNow).description.hasPrefix("Token expired"))
+  #expect(!ProviderCredentialHealth.expiredSignIn(.claude, at: fixedNow).isUsable)
+  #expect(
+    ProviderCredentialHealth.from(expiresAt: nil, now: fixedNow, source: ProviderID.claude.setup.credentialSources[0])
+      .isUsable)
+}
+
+@Test(arguments: [
+  (ProviderCredentialHealth.notFoundForTests, true),
+  (.unreadable(source: nil, detail: "x"), true),
+  (.unchecked, false),
+  (.signedIn(.claude), false),
+  (.expiredSignIn(.claude, at: fixedNow), false),
+])
+func credentialHealthCountsUnreadableAsMissing(health: ProviderCredentialHealth, missing: Bool) {
+  #expect(health.isMissing == missing)
+}
+
+@Test func isoDateParsesFractionalAndPlain() {
+  #expect(ISODate.parse("2026-08-29T18:49:59.521847+00:00") != nil)
+  #expect(ISODate.parse("2026-08-29T18:49:59Z") == Date(timeIntervalSince1970: 1_788_029_399))
+  #expect(ISODate.parse("not a date") == nil)
+  #expect(ISODate.parse(nil) == nil)
+  #expect(ISODate.string(Date(timeIntervalSince1970: 0)) == "1970-01-01T00:00:00.000Z")
+}
+
+private enum CredentialFileKind: String {
+  case claude
+  case codex
+  case gemini
+
+  func save(token: String, to url: URL) throws {
+    switch self {
+    case .claude:
+      try FileClaudeCredentialStore(url: url).save(
+        ClaudeOAuthCredentials(accessToken: token, refreshToken: nil, expiresAt: nil))
+    case .codex:
+      try FileCodexAuthStore(url: url).save(CodexAuth(accessToken: token))
+    case .gemini:
+      try FileGeminiAuthStore(url: url).save(GeminiAuth(accessToken: token))
+    }
+  }
+
+  func token(at url: URL) throws -> String? {
+    switch self {
+    case .claude: try FileClaudeCredentialStore(url: url).load()?.accessToken
+    case .codex: try FileCodexAuthStore(url: url).load()?.accessToken
+    case .gemini: try FileGeminiAuthStore(url: url).load()?.accessToken
+    }
+  }
+}
+
+@Test func credentialFileWriteLeavesNothingBehindWhenTheDestinationCannotBeReplaced() throws {
+  let directory = temporaryDirectory()
+  let occupied = directory.appendingPathComponent("credentials.json")
+  try FileManager.default.createDirectory(at: occupied, withIntermediateDirectories: true)
+  try Data("keep".utf8).write(to: occupied.appendingPathComponent("child"))
+
+  #expect(throws: (any Error).self) { try writeCredentialData(Data("{}".utf8), to: occupied) }
+  #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path) == ["credentials.json"])
+  #expect(try FileManager.default.contentsOfDirectory(atPath: occupied.path) == ["child"])
+}

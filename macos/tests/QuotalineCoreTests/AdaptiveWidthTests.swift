@@ -1,0 +1,226 @@
+import CoreGraphics
+import Foundation
+import QuotalineTestSupport
+import Testing
+
+@testable import QuotalineCore
+
+@Test func tiersReshapeTheStatusModel() {
+  let configured = StatusItemBuilder.build(input())
+  #expect(configured.cells.count == 3)
+  #expect(StatusItemBuilder.build(input(tier: .stacked)) == configured)
+  #expect(StatusItemBuilder.build(input(tier: .worstPerProvider)).cells.map(\.id) == ["claude:weekly", "codex:weekly"])
+  #expect(StatusItemBuilder.build(input(tier: .miniBars)).cells.allSatisfy { $0.isMiniBar })
+  let icon = StatusItemBuilder.build(input(tier: .iconOnly))
+  #expect(icon.cells.isEmpty && icon.showsIcon && !icon.countdownActive)
+  #expect(StatusItemBuilder.build(input(format: .inline, tier: .stacked)).cells.first?.lines.count == 2)
+  #expect(input(format: .miniBars, tier: .iconOnly).effectiveFormat == .miniBars)
+  #expect(input(format: .inline).with(tier: .miniBars).tier == .miniBars)
+  let percentOrdered = StatusItemInput(
+    snapshots: input().snapshots, availability: [:], selectedKeys: input().selectedKeys, format: .stacked,
+    customTemplate: "", decimals: 0, hideZeroCells: true, order: .percent, labels: [:], now: fixedNow,
+    tier: .worstPerProvider)
+  #expect(StatusItemBuilder.build(percentOrdered).cells.map(\.id) == ["codex:weekly", "claude:weekly"])
+}
+
+private func input(
+  format: StatusFormat = .stacked, tier: StatusTier = .configured, hideZero: Bool = true
+)
+  -> StatusItemInput
+{
+  let claude = ProviderReading(
+    provider: .claude,
+    windows: [
+      QuotaWindow(id: "session", label: "Session", group: .session, usedPercent: 36, resetsAt: fixedNow),
+      QuotaWindow(id: "weekly", label: "Weekly", group: .weekly, usedPercent: 61, resetsAt: fixedNow),
+    ], fetchedAt: fixedNow)
+  let codex = ProviderReading(
+    provider: .codex,
+    windows: [QuotaWindow(id: "weekly", label: "Weekly", group: .weekly, usedPercent: 80, resetsAt: fixedNow)],
+    fetchedAt: fixedNow)
+  let snapshots: [ProviderID: ProviderReading] = [.claude: claude, .codex: codex]
+  return StatusItemInput(
+    snapshots: snapshots, availability: [.claude: .current, .codex: .current],
+    selectedKeys: StatusItemBuilder.defaultSelection(snapshots), format: format, customTemplate: "{cell}",
+    decimals: 0, hideZeroCells: hideZero, order: .provider, labels: [:], now: fixedNow, tier: tier)
+}
+
+@Test func candidatesDedupeEqualModels() {
+  let candidates = StatusItemBuilder.candidates(input())
+  #expect(candidates.count == 4)
+  #expect(candidates.first == StatusItemBuilder.build(input()))
+  #expect(candidates.last?.cells.isEmpty == true)
+  #expect(Set(candidates).count == candidates.count)
+  #expect(StatusItemBuilder.candidates(input(format: .miniBars)).count == 4)
+}
+
+@Test(arguments: StatusFormat.allCases, [true, false])
+func batchedCandidatesMatchIndividualTiers(format: StatusFormat, hideZero: Bool) {
+  let source = input(format: format, hideZero: hideZero)
+  var expected: [StatusItemModel] = []
+  for tier in StatusTier.allCases {
+    let model = StatusItemBuilder.build(source.with(tier: tier))
+    if !expected.contains(model) { expected.append(model) }
+  }
+  #expect(StatusItemBuilder.candidates(source) == expected)
+}
+
+@Test func plannerStepsDownRemembersAndForgets() {
+  var planner = AdaptiveWidthPlanner()
+  #expect(planner.begin(context: "app", ladderCount: 3) == 0)
+  #expect(planner.didNotFit(ladderCount: 3) == 1)
+  #expect(planner.didNotFit(ladderCount: 3) == 2)
+  #expect(planner.didNotFit(ladderCount: 3) == nil)
+  #expect(planner.index == 2)
+  planner.didFit(context: "app")
+  #expect(planner.begin(context: "other", ladderCount: 3) == 0)
+  // one tier wider than what last fit, so space freed since then gets retried
+  #expect(planner.begin(context: "app", ladderCount: 3) == 1)
+  #expect(planner.begin(context: "app", ladderCount: 2) == 0)
+  #expect(planner.didNotFit(ladderCount: 3) == 1)
+  planner.didFit(context: "app")
+  #expect(planner.begin(context: "app", ladderCount: 3) == 0)
+  planner.forget()
+  #expect(planner.begin(context: "app", ladderCount: 3) == 0)
+  #expect(planner.begin(context: "app", ladderCount: 0) == 0)
+  #expect(planner.context == "app")
+  planner.forget()
+  #expect(planner == AdaptiveWidthPlanner())
+}
+
+@Test func ladderKeepsOnlyNarrowerUniqueModels() {
+  let candidates = StatusItemBuilder.candidates(input())
+  let ladder = AdaptiveWidthPlanner.ladder(candidates, widths: [100, 120, 60, 80])
+  #expect(ladder == [candidates[0], candidates[3], candidates[2]])
+  #expect(AdaptiveWidthPlanner.ladder([candidates[0], candidates[0]], widths: [100, 50]) == [candidates[0]])
+  #expect(AdaptiveWidthPlanner.ladder([], widths: []).isEmpty)
+}
+
+@Test func ladderKeepsCandidateOrderWhenWidthsTie() {
+  let candidates = StatusItemBuilder.candidates(input())
+  #expect(
+    AdaptiveWidthPlanner.ladder(
+      [candidates[0], candidates[2], candidates[3]], widths: [100, 80, 80])
+      == [candidates[0], candidates[2], candidates[3]])
+}
+
+@Test func plannerCanSelectItsNarrowestTier() {
+  var planner = AdaptiveWidthPlanner()
+  #expect(planner.selectNarrowest(ladderCount: 5) == 4)
+  #expect(planner.index == 4)
+  #expect(planner.selectNarrowest(ladderCount: 0) == 0)
+}
+
+@Test(arguments: [0, 1, 2, 3, 5])
+func plannerResumesWithoutProbingAWiderTier(ladderCount: Int) {
+  var planner = AdaptiveWidthPlanner()
+  _ = planner.selectNarrowest(ladderCount: 3)
+
+  #expect(planner.resume(ladderCount: ladderCount) == min(2, max(ladderCount - 1, 0)))
+}
+
+@Test func notchDetectionUsesAuxiliaryAreas() {
+  let left = CGRect(x: 0, y: 0, width: 400, height: 30)
+  let right = CGRect(x: 600, y: 0, width: 400, height: 30)
+  #expect(
+    AdaptiveWidthPlanner.hiddenByNotch(
+      itemFrame: CGRect(x: 500, y: 0, width: 50, height: 30), leftArea: left, rightArea: right))
+  #expect(
+    AdaptiveWidthPlanner.hiddenByNotch(
+      itemFrame: CGRect(x: 580, y: 0, width: 50, height: 30), leftArea: left, rightArea: right))
+  #expect(
+    !AdaptiveWidthPlanner.hiddenByNotch(
+      itemFrame: CGRect(x: 700, y: 0, width: 50, height: 30), leftArea: left, rightArea: right))
+  #expect(
+    !AdaptiveWidthPlanner.hiddenByNotch(
+      itemFrame: CGRect(x: 100, y: 0, width: 50, height: 30), leftArea: left, rightArea: right))
+  #expect(
+    !AdaptiveWidthPlanner.hiddenByNotch(
+      itemFrame: CGRect(x: 500, y: 0, width: 50, height: 30), leftArea: nil, rightArea: right))
+}
+
+@Test func onScreenRequiresTheItemToFitWithOnePointOfEdgeTolerance() {
+  let screen = CGRect(x: 0, y: 0, width: 1440, height: 900)
+  #expect(
+    AdaptiveWidthPlanner.isOnScreen(itemFrame: CGRect(x: 100, y: 0, width: 60, height: 24), screenFrames: [screen]))
+  #expect(
+    !AdaptiveWidthPlanner.isOnScreen(itemFrame: CGRect(x: 1430, y: 0, width: 60, height: 24), screenFrames: [screen]))
+  #expect(
+    AdaptiveWidthPlanner.isOnScreen(itemFrame: CGRect(x: 1430, y: 0, width: 11, height: 24), screenFrames: [screen]))
+  #expect(
+    !AdaptiveWidthPlanner.isOnScreen(itemFrame: CGRect(x: 5000, y: 0, width: 60, height: 24), screenFrames: [screen]))
+  #expect(
+    !AdaptiveWidthPlanner.isOnScreen(itemFrame: CGRect(x: 10, y: 0, width: 0, height: 24), screenFrames: [screen]))
+  #expect(!AdaptiveWidthPlanner.isOnScreen(itemFrame: screen, screenFrames: []))
+}
+
+@Test(arguments: [14, 15, 26, 27, 28])
+func visibilityUsesOcclusionUntilTheManagedMenuBar(macOSMajor: Int) {
+  let screen = CGRect(x: 0, y: 0, width: 1024, height: 768)
+  let frame = CGRect(x: 500, y: 744, width: 200, height: 24)
+  #expect(
+    AdaptiveWidthPlanner.isVisible(
+      itemFrame: frame, screenFrames: [screen], occlusionVisible: true, placed: true, macOSMajor: macOSMajor))
+  #expect(
+    AdaptiveWidthPlanner.isVisible(
+      itemFrame: frame, screenFrames: [screen], occlusionVisible: false, placed: true, macOSMajor: macOSMajor)
+      == (macOSMajor >= 27))
+  #expect(
+    !AdaptiveWidthPlanner.isVisible(
+      itemFrame: CGRect(x: 528, y: 744, width: 586, height: 24), screenFrames: [screen],
+      occlusionVisible: true, placed: true, macOSMajor: macOSMajor))
+  #expect(
+    AdaptiveWidthPlanner.isVisible(
+      itemFrame: frame, screenFrames: [screen], occlusionVisible: true, placed: false, macOSMajor: macOSMajor)
+      == (macOSMajor < 27))
+}
+
+@Test(arguments: [(1, [13.0]), (2, [9.0, 11.5])])
+func fontSizesMatchTheLineCount(lineCount: Int, expected: [Double]) {
+  #expect(StatusMetrics.fontSizes(height: 24, lineCount: lineCount) == expected)
+}
+
+@Test func threeLinesShrinkWithTheBarHeight() {
+  #expect(StatusMetrics.fontSizes(height: 24, lineCount: 3) == [8, 8, 8])
+  #expect(StatusMetrics.fontSizes(height: 120, lineCount: 3) == [9, 9, 9])
+  #expect(StatusMetrics.fontSizes(height: 1, lineCount: 3).allSatisfy { $0 == StatusMetrics.minFontSize })
+}
+
+// Frames recorded from a status item on macOS 27 as its length changed from 24 to 380, and from 24 to 900 with no room.
+@Test(arguments: [
+  (CGRect(x: 752, y: 1050, width: 36, height: 30), CGRect(x: 396, y: 1050, width: 392, height: 30), true),
+  (CGRect(x: 752, y: 1050, width: 36, height: 30), CGRect(x: 752, y: 1050, width: 912, height: 30), false),
+])
+func placementReadsWhetherALengthChangeMovedTheItem(before: CGRect, after: CGRect, placed: Bool) {
+  var placement = StatusItemPlacement()
+  placement.lengthWillChange(itemFrame: before)
+  let settled = placement.settle(itemFrame: after)
+  #expect(settled == placed)
+}
+
+@Test func placementWaitsForAMoveThatLandsAfterTheFirstCheck() {
+  var placement = StatusItemPlacement()
+  placement.lengthWillChange(itemFrame: CGRect(x: 752, y: 1050, width: 36, height: 30))
+  let beforeMove = placement.settle(itemFrame: CGRect(x: 752, y: 1050, width: 212, height: 30))
+  let afterMove = placement.settle(itemFrame: CGRect(x: 576, y: 1050, width: 212, height: 30))
+  #expect(!beforeMove && afterMove)
+}
+
+@Test func placementKeepsItsVerdictUntilTheLengthChanges() {
+  var placement = StatusItemPlacement()
+  let frame = CGRect(x: 396, y: 1050, width: 392, height: 30)
+  placement.lengthWillChange(itemFrame: CGRect(x: 752, y: 1050, width: 36, height: 30))
+  let moved = placement.settle(itemFrame: frame)
+  let unchanged = placement.settle(itemFrame: frame)
+  #expect(moved && unchanged)
+}
+
+@Test func placementMeasuresFromTheFrameBeforeTheLatestLengthChange() {
+  var placement = StatusItemPlacement()
+  let stretched = CGRect(x: 752, y: 1050, width: 912, height: 30)
+  placement.lengthWillChange(itemFrame: CGRect(x: 752, y: 1050, width: 36, height: 30))
+  let noRoom = placement.settle(itemFrame: stretched)
+  placement.lengthWillChange(itemFrame: stretched)
+  let narrower = placement.settle(itemFrame: CGRect(x: 576, y: 1050, width: 212, height: 30))
+  #expect(!noRoom && narrower)
+}

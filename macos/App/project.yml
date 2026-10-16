@@ -1,0 +1,293 @@
+name: Quotaline
+options:
+  bundleIdPrefix: tech.bernat
+  deploymentTarget:
+    macOS: "15.0"
+  xcodeVersion: "26.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: false
+configs:
+  Debug: debug
+  Verification: release
+  Release: release
+  Homebrew: release
+  AppStore: release
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY: YES
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    MARKETING_VERSION: "0.1.8"
+    CURRENT_PROJECT_VERSION: "1000"
+    # The git-derived version, which names the commit a dev build came from; see Scripts/version.sh
+    SOURCE_VERSION: "0.1.8"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
+    ARCHS: arm64 x86_64
+    ONLY_ACTIVE_ARCH: NO
+    # Archives strip by default, but a plain `xcodebuild build` does not, and the difference is over half the
+    # binary. Naming them means the shipped size does not depend on which invocation produced it.
+    STRIP_INSTALLED_PRODUCT: YES
+    STRIP_STYLE: all
+    DEAD_CODE_STRIPPING: YES
+    APP_GROUP_ID: group.tech.bernat.quotaline
+    # The names of the App Store profiles, matched by the export options plist the release writes
+    APP_PROFILE: Quotaline App Store
+    WIDGET_PROFILE: Quotaline Widget App Store
+  configs:
+    Debug:
+      ONLY_ACTIVE_ARCH: YES
+packages:
+  QuotalinePackage:
+    path: ..
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: "2.10.0"
+targetTemplates:
+  UITest:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: ../tests/UITestSupport
+      - path: ../tests/QuotalineNativeGuard/NativeDesktop.c
+    dependencies:
+      - target: QuotalineDirect
+      - package: QuotalinePackage
+        product: QuotalineCore
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        GCC_PREPROCESSOR_DEFINITIONS:
+          - $(inherited)
+          - QUOTALINE_APPLICATION_UI_TESTS=1
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: QuotalineDirect
+  Application:
+    type: application
+    platform: macOS
+    sources:
+      - path: ../src/Quotaline
+        name: Entry
+      - path: Assets.xcassets
+      - path: PrivacyInfo.xcprivacy
+    dependencies:
+      - package: QuotalinePackage
+        product: QuotalineUI
+      - package: QuotalinePackage
+        product: QuotalineCore
+      - target: QuotalineWidget
+        embed: true
+    info:
+      path: ${info_path}
+      properties:
+        CFBundleName: Quotaline
+        CFBundleDisplayName: Quotaline
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        TMBSourceVersion: $(SOURCE_VERSION)
+        TMBDistribution: ${distribution}
+        TMBSelfUpdateEnabled: $(SELF_UPDATE_ENABLED)
+        TMBVerificationOnly: $(VERIFICATION_ONLY)
+        LSUIElement: true
+        LSMinimumSystemVersion: "15.0"
+        LSApplicationCategoryType: public.app-category.developer-tools
+        NSHumanReadableCopyright: "Copyright © 2026 Bernát Gábor. MIT licensed."
+        ITSAppUsesNonExemptEncryption: false
+        NSSupportsAutomaticTermination: false
+        QuotalineAppGroup: $(APP_GROUP_ID)
+    settings:
+      base:
+        PRODUCT_NAME: Quotaline
+        PRODUCT_BUNDLE_IDENTIFIER: tech.bernat.quotaline
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_APP_SANDBOX: NO
+        VERIFICATION_ONLY: NO
+        CODE_SIGN_ENTITLEMENTS: ${entitlements}
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: ${condition}
+        TMB_DISTRIBUTION: ${distribution}
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+targets:
+  QuotalineDirect:
+    templates:
+      - Application
+    templateAttributes:
+      condition: DIRECT
+      distribution: Direct
+      entitlements: Direct.entitlements
+      info_path: Info.plist
+    sources:
+      - path: ../src/QuotalineApp/SparkleUpdater.swift
+        name: SparkleUpdater
+    dependencies:
+      - package: Sparkle
+        product: Sparkle
+    info:
+      properties:
+        SUFeedURL: https://github.com/quotaline/quotaline/releases/latest/download/appcast.xml
+        SUPublicEDKey: $(SPARKLE_PUBLIC_ED_KEY)
+        SUEnableAutomaticChecks: false
+        SUEnableInstallerLauncherService: true
+    settings:
+      base:
+        SPARKLE_PUBLIC_ED_KEY: ""
+        SELF_UPDATE_ENABLED: NO
+      configs:
+        Debug: &verification-app
+          CODE_SIGN_ENTITLEMENTS: Verification.entitlements
+          CODE_SIGN_IDENTITY: "-"
+          CODE_SIGN_STYLE: Manual
+          PRODUCT_NAME: QuotalineDirect
+          PRODUCT_BUNDLE_IDENTIFIER: tech.bernat.quotaline.verification
+        Verification:
+          !!merge <<: *verification-app
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) VERIFICATION"
+          VERIFICATION_ONLY: YES
+        Release:
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+          CODE_SIGN_STYLE: Manual
+  QuotalineHomebrew:
+    templates:
+      - Application
+    templateAttributes:
+      condition: HOMEBREW
+      distribution: Homebrew
+      entitlements: Direct.entitlements
+      info_path: Info-Homebrew.plist
+    settings:
+      configs:
+        Homebrew:
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+          CODE_SIGN_STYLE: Manual
+  QuotalineAppStore:
+    templates:
+      - Application
+    templateAttributes:
+      condition: APPSTORE
+      distribution: App Store
+      entitlements: AppStore.entitlements
+      info_path: Info-AppStore.plist
+    settings:
+      base:
+        ENABLE_HARDENED_RUNTIME: NO
+        ENABLE_APP_SANDBOX: YES
+      configs:
+        AppStore:
+          CODE_SIGN_IDENTITY: "Apple Distribution"
+          CODE_SIGN_STYLE: Manual
+          PROVISIONING_PROFILE_SPECIFIER: $(APP_PROFILE)
+  QuotalineWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: ../src/QuotalineWidgetApp
+        name: Widget
+      - path: PrivacyInfo.xcprivacy
+    dependencies:
+      - package: QuotalinePackage
+        product: QuotalineWidgets
+      - package: QuotalinePackage
+        product: QuotalineCore
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleName: Quotaline Widget
+        CFBundleDisplayName: Quotaline
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        TMBSourceVersion: $(SOURCE_VERSION)
+        QuotalineAppGroup: $(APP_GROUP_ID)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_NAME: QuotalineWidget
+        PRODUCT_BUNDLE_IDENTIFIER: tech.bernat.quotaline.widget
+        CODE_SIGN_ENTITLEMENTS: Widget/Widget.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_APP_SANDBOX: YES
+        SKIP_INSTALL: YES
+      configs:
+        Debug: &verification-widget
+          CODE_SIGN_ENTITLEMENTS: ""
+          CODE_SIGN_IDENTITY: "-"
+          CODE_SIGN_STYLE: Manual
+          PRODUCT_BUNDLE_IDENTIFIER: tech.bernat.quotaline.verification.widget
+        Verification: *verification-widget
+        Release:
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+          CODE_SIGN_STYLE: Manual
+        Homebrew:
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+          CODE_SIGN_STYLE: Manual
+        AppStore:
+          CODE_SIGN_IDENTITY: "Apple Distribution"
+          CODE_SIGN_STYLE: Manual
+          PROVISIONING_PROFILE_SPECIFIER: $(WIDGET_PROFILE)
+  QuotalineApplicationUITests:
+    templates: [UITest]
+    sources:
+      - path: ../tests/ApplicationUI
+      - path: ../tests/QuotalineTestSupport/RenderedText.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: tech.bernat.quotaline.application-ui-tests
+  QuotalinePerformanceTests:
+    templates: [UITest]
+    sources:
+      - path: ../tests/Performance
+      - path: ../tests/QuotalineTestSupport/TestSupport.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: tech.bernat.quotaline.performance-tests
+schemes:
+  Quotaline-Benchmarks:
+    build:
+      targets:
+        QuotalineDirect: all
+    test:
+      config: Verification
+      debugEnabled: false
+      captureScreenshotsAutomatically: false
+      preferredScreenCaptureFormat: screenshots
+      gatherCoverageData: false
+      testPlans:
+        - path: ../tests/TestPlans/Benchmarks.xctestplan
+          defaultPlan: true
+  Quotaline-Direct:
+    build:
+      targets:
+        QuotalineDirect: all
+    run:
+      config: Debug
+    test:
+      config: Verification
+      debugEnabled: false
+      captureScreenshotsAutomatically: false
+      preferredScreenCaptureFormat: screenshots
+      gatherCoverageData: false
+      testPlans:
+        - path: ../tests/TestPlans/Quotaline.xctestplan
+          defaultPlan: true
+    archive:
+      config: Release
+  Quotaline-AppStore:
+    build:
+      targets:
+        QuotalineAppStore: all
+    run:
+      config: AppStore
+    archive:
+      config: AppStore
+  Quotaline-Homebrew:
+    build:
+      targets:
+        QuotalineHomebrew: all
+    run:
+      config: Homebrew
+    archive:
+      config: Homebrew

@@ -252,7 +252,13 @@ extension LiveControlAuditUITests {
     for _ in 0..<20 {
       let before = current.frame
       if viewport.contains(before) {
-        return type == .staticText || waitUntil(timeout: controlTimeout) { element.isHittable }
+        if type == .staticText || waitUntil(timeout: controlTimeout, condition: { element.isHittable }) {
+          return true
+        }
+        // Wheel acceleration can carry a briefly visible control past the viewport while hit testing waits.
+        guard let after = try? element.snapshot(), !viewport.contains(after.frame) else { return false }
+        current = after
+        continue
       }
       guard before.midX >= viewport.minX && before.midX <= viewport.maxX else { return false }
       guard abs(before.midY - viewport.midY) > 20 else { return false }

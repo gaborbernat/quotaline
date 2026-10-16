@@ -5,6 +5,7 @@
 
 """Preserve stack samples when a test command stops producing output."""
 
+import contextlib
 import os
 import selectors
 import signal
@@ -81,11 +82,11 @@ def _stop(process: subprocess.Popen[bytes]) -> None:
         os.killpg(process.pid, signal.SIGTERM)
     except ProcessLookupError:
         return
-    try:
+    with contextlib.suppress(subprocess.TimeoutExpired):
         process.wait(timeout=5)
-    except subprocess.TimeoutExpired:
+    with contextlib.suppress(ProcessLookupError):
         os.killpg(process.pid, signal.SIGKILL)
-        process.wait()
+    process.wait()
 
 
 __all__ = ["main"]

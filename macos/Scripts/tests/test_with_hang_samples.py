@@ -1,7 +1,10 @@
 """Use disposable subprocesses to check silence deadlines and cleanup."""
 
+import contextlib
+import os
 import runpy
 import selectors
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -139,3 +142,34 @@ def test_cli_returns_status(tmp_path: Path, mocker: MockerFixture) -> None:
     with pytest.raises(SystemExit) as result:
         runpy.run_path(str(Path(__file__).resolve().parents[1] / "with_hang_samples.py"), run_name="__main__")
     assert result.value.code == _FAILURE
+
+
+def test_timeout_kills_a_descendant_after_its_parent_exits(tmp_path: Path) -> None:
+    """A responsive parent must not hide a descendant that ignores termination."""
+    child: Final = (
+        "import os,signal,time;signal.signal(signal.SIGTERM,signal.SIG_IGN);"
+        "print(os.getpid(),flush=True);time.sleep(30)"
+    )
+    try:
+        result: Final = main(
+            [
+                "0.01",
+                str(tmp_path),
+                sys.executable,
+                "-c",
+                (
+                    f"import os,subprocess,sys,time;print(os.getpid(),flush=True);"
+                    f"subprocess.Popen([sys.executable,'-c',{child!r}]);time.sleep(30)"
+                ),
+            ]
+        )
+        child_pid: Final = int((tmp_path / "output.log").read_text().splitlines()[1])
+        assert result == _TIMEOUT
+        psutil.wait_procs([process for process in psutil.process_iter() if process.pid == child_pid], timeout=1)
+        assert child_pid not in {
+            process.pid for process in psutil.process_iter(["status"]) if process.info["status"] != psutil.STATUS_ZOMBIE
+        }
+    finally:
+        parent_pid: Final = int((tmp_path / "output.log").read_text().splitlines()[0])
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(parent_pid, signal.SIGKILL)

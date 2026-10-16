@@ -438,12 +438,12 @@ jobs:
         with:
           version: 2026.10.11
           working_directory: macos
+          install_args: --locked just
       - name: Select Xcode
         id: xcode
         run: |
           Scripts/select-xcode.sh
           echo "cache=$(xcodebuild -version | shasum -a 256 | cut -c 1-12)" >> "$GITHUB_OUTPUT"
-      - run: just macos-toolchain
       - name: Restore verified Rust bindings
         id: bindings
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -452,6 +452,13 @@ jobs:
             macos/Generated/QuotalineRustFFI.xcframework
             macos/src/QuotalineRust
           key: macos-bindings-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.cache }}-${{ hashFiles('crates/**', 'macos/adapter/**', 'macos/platform/**', 'macos/uniffi.toml', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'mise.toml', 'mise.lock', 'justfile') }}
+      - if: steps.bindings.outputs.cache-hit != 'true'
+        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          working_directory: macos
+          install_args: --locked just rust swift
+      - run: just macos-toolchain
       - if: steps.bindings.outputs.cache-hit != 'true'
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
@@ -491,6 +498,7 @@ jobs:
         with:
           version: 2026.10.11
           working_directory: macos
+          install_args: --locked just jq swift swiftlint uv
       - run: Scripts/select-xcode.sh
       - run: just macos-lint-swift
       - run: just --unstable --fmt --check --justfile ../justfile
@@ -514,6 +522,7 @@ jobs:
         with:
           version: 2026.10.11
           working_directory: macos
+          install_args: --locked just jq swift uv
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: macos-rust-bindings
@@ -572,6 +581,7 @@ jobs:
         with:
           version: 2026.10.11
           working_directory: macos
+          install_args: --locked just jq swift uv
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: macos-rust-bindings
@@ -678,6 +688,7 @@ jobs:
         with:
           version: 2026.10.11
           working_directory: macos
+          install_args: --locked just jq uv xcodegen
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: macos-rust-bindings

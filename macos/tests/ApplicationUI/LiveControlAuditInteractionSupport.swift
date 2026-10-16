@@ -87,10 +87,12 @@ extension LiveControlAuditUITests {
   }
 
   @MainActor
-  func toggleAndRestore(_ toggle: XCUIElement) {
+  func toggleAndRestore(_ toggle: XCUIElement, in surface: XCUIElement) {
     let before = isSelected(toggle)
     toggle.click()
     XCTAssertTrue(waitUntil(timeout: controlTimeout) { self.isSelected(toggle) != before })
+    // Toggling can remove rows and move the checkbox within its scroll view.
+    XCTAssertTrue(reveal(toggle, in: surface), "Cannot reach the checkbox after toggling")
     toggle.click()
     XCTAssertTrue(waitUntil(timeout: controlTimeout) { self.isSelected(toggle) == before })
   }

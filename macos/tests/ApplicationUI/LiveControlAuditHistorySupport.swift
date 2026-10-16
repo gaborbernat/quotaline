@@ -10,6 +10,7 @@ extension LiveControlAuditUITests {
     _ application: XCUIApplication, supportDirectory: URL
   ) throws -> [ControlAuditRecord] {
     var records: [ControlAuditRecord] = []
+    let surface = application.descendants(matching: .any)["popover-surface"]
     let period = application.descendants(matching: .any)["history-period"]
     let rollup = application.descendants(matching: .any)["history-rollup"]
     let metric = application.descendants(matching: .any)["history-metric"]
@@ -22,7 +23,7 @@ extension LiveControlAuditUITests {
     let utc = application.checkBoxes["UTC"]
     XCTAssertTrue(utc.waitUntilExists(timeout: 2))
     XCTAssertTrue(utc.isEnabled)
-    toggleAndRestore(utc)
+    toggleAndRestore(utc, in: surface)
     records.append(scenarioRecord(tab: "History", label: "UTC boundaries", element: utc, action: "toggle twice"))
     XCTAssertTrue(rollup.waitUntilExists(timeout: 2))
     XCTAssertTrue(rollup.isEnabled, "Window Usage must enable Rollup")
@@ -41,7 +42,7 @@ extension LiveControlAuditUITests {
     let stacked = application.checkBoxes["history-stacked"]
     XCTAssertTrue(stacked.waitUntilExists(timeout: 2))
     XCTAssertTrue(stacked.isEnabled, "An additive metric with parallel series must enable Stacked")
-    toggleAndRestore(stacked)
+    toggleAndRestore(stacked, in: surface)
     records.append(scenarioRecord(tab: "History", label: "Additive metric stacking", element: stacked))
 
     XCTAssertTrue(application.descendants(matching: .any)["history-chart"].waitUntilExists(timeout: 2))

@@ -109,7 +109,7 @@ extension LiveControlAuditUITests {
     for label in ["Hide 0%", "Fit to space"] {
       let toggle = application.checkBoxes[label]
       XCTAssertTrue(toggle.exists && toggle.isHittable)
-      toggleAndRestore(toggle)
+      toggleAndRestore(toggle, in: surface)
       records.append(scenarioRecord(tab: "Settings", label: label, element: toggle, action: "toggle twice"))
     }
     let preview = application.descendants(matching: .any)["menu-bar-preview"]
@@ -147,7 +147,7 @@ extension LiveControlAuditUITests {
 
     let modelSelection = application.checkBoxes["model-selection-claude:session"]
     XCTAssertTrue(reveal(modelSelection, in: surface))
-    toggleAndRestore(modelSelection)
+    toggleAndRestore(modelSelection, in: surface)
     records.append(
       scenarioRecord(tab: "Settings", label: "Model selection", element: modelSelection, action: "toggle twice"))
 
@@ -163,7 +163,7 @@ extension LiveControlAuditUITests {
 
     let hideUnused = application.checkBoxes["Hide unused in range"]
     XCTAssertTrue(hideUnused.exists && hideUnused.isHittable)
-    toggleAndRestore(hideUnused)
+    toggleAndRestore(hideUnused, in: surface)
     records.append(
       scenarioRecord(tab: "Settings", label: "Hide unused models", element: hideUnused, action: "toggle twice"))
     return records
@@ -222,7 +222,7 @@ extension LiveControlAuditUITests {
     records.append(scenarioRecord(tab: "Settings", label: "Distribution channel", element: channel, action: "observe"))
     let launchAtLogin = application.checkBoxes["Launch at login"]
     XCTAssertTrue(reveal(launchAtLogin, in: surface))
-    toggleAndRestore(launchAtLogin)
+    toggleAndRestore(launchAtLogin, in: surface)
     records.append(
       scenarioRecord(tab: "Settings", label: "Launch at login", element: launchAtLogin, action: "toggle twice"))
     for (label, identifier) in [
@@ -266,7 +266,7 @@ extension LiveControlAuditUITests {
           tab: "Settings", label: "\(provider.displayName) authentication source", element: row,
           action: "observe"))
       XCTAssertTrue(toggle.exists)
-      toggleAndRestore(toggle)
+      toggleAndRestore(toggle, in: surface)
       records.append(
         scenarioRecord(
           tab: "Settings", label: "\(provider.displayName) enabled", element: toggle, action: "toggle twice"))
@@ -287,7 +287,7 @@ extension LiveControlAuditUITests {
       NSPredicate(format: "label BEGINSWITH 'Refresh expired ' AND label ENDSWITH ' tokens on my behalf'")
     ).firstMatch
     XCTAssertTrue(reveal(tokenRefresh, in: surface))
-    toggleAndRestore(tokenRefresh)
+    toggleAndRestore(tokenRefresh, in: surface)
     records.append(scenarioRecord(tab: "Settings", label: "Provider token refresh", element: tokenRefresh))
     return records
   }
@@ -405,7 +405,7 @@ extension LiveControlAuditUITests {
       let threshold = application.checkBoxes[label]
       XCTAssertTrue(reveal(threshold, in: surface))
       XCTAssertTrue(threshold.exists && threshold.isEnabled && threshold.isHittable, "Missing notification \(label)")
-      toggleAndRestore(threshold)
+      toggleAndRestore(threshold, in: surface)
       records.append(
         scenarioRecord(
           tab: "Settings", label: "Notification threshold \(label)", element: threshold, action: "toggle twice"))
@@ -414,7 +414,7 @@ extension LiveControlAuditUITests {
       let toggle = application.checkBoxes[label]
       XCTAssertTrue(reveal(toggle, in: surface))
       XCTAssertTrue(toggle.exists && toggle.isEnabled && toggle.isHittable, "Missing \(label)")
-      toggleAndRestore(toggle)
+      toggleAndRestore(toggle, in: surface)
       records.append(
         scenarioRecord(tab: "Settings", label: label, element: toggle, action: "toggle twice"))
     }

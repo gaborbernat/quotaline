@@ -451,7 +451,7 @@ jobs:
           path: |
             macos/Generated/QuotalineRustFFI.xcframework
             macos/src/QuotalineRust
-          key: macos-bindings-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.cache }}-${{ hashFiles('crates/**', 'macos/adapter/**', 'macos/platform/**', 'macos/uniffi.toml', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'mise.toml', 'mise.lock', 'justfile') }}
+          key: macos-bindings-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.cache }}-${{ hashFiles('crates/**', 'macos/adapter/**', 'macos/platform/**', 'macos/uniffi.toml', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'mise.toml', 'mise.lock', 'justfile') }}
       - if: steps.bindings.outputs.cache-hit != 'true'
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
         with:
@@ -498,7 +498,7 @@ jobs:
         with:
           version: 2026.10.11
           working_directory: macos
-          install_args: --locked just jq swift swiftlint uv
+          install_args: --locked just jq swift swiftlint uv xcodegen
       - run: Scripts/select-xcode.sh
       - run: just macos-lint-swift
       - run: just --unstable --fmt --check --justfile ../justfile
@@ -522,7 +522,7 @@ jobs:
         with:
           version: 2026.10.11
           working_directory: macos
-          install_args: --locked just jq swift uv
+          install_args: --locked just jq ripgrep swift uv
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: macos-rust-bindings
@@ -581,7 +581,7 @@ jobs:
         with:
           version: 2026.10.11
           working_directory: macos
-          install_args: --locked just jq swift uv
+          install_args: --locked just jq ripgrep swift uv
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: macos-rust-bindings

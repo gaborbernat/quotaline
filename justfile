@@ -9,7 +9,9 @@ xcframework := root + "/macos/Generated/QuotalineRustFFI.xcframework"
 extension_build := root + "/target/extension"
 export TMPDIR := tmp
 nextest_profile := env_var_or_default("TMB_NEXTEST_PROFILE", "ci")
-rust_coverage_ignore := "/rustc/|/target/|/[.]cargo/|/[.]rustup/|/macos/adapter/src/(credentials/(keychain|source_chain)|http/native|providers/antigravity/local|time/clock)_callback[.]rs|/macos/(adapter|platform)/tests/support/keychain[.]rs|/support/(http_transport|server_scanner)[.]rs"
+rust_scope := env_var_or_default("TMB_RUST_SCOPE", "workspace")
+rust_packages := if rust_scope == "gnome" { "-p quotaline-gnome -p quotaline-gnome-adapter" } else { "--workspace" }
+rust_coverage_ignore := "/rustc/|/target/|/[.]cargo/|/[.]rustup/|/macos/adapter/src/(credentials/(keychain|source_chain)|http/native|providers/antigravity/local|time/clock)_callback[.]rs|/macos/(adapter|platform)/tests/support/keychain[.]rs|/support/(http_transport|server_scanner)[.]rs" + if rust_scope == "gnome" { "|/crates/|/macos/" } else { "" }
 
 # List available commands
 default:
@@ -113,17 +115,17 @@ fmt:
 # Check Rust formatting
 format-check:
     mkdir -p {{ tmp }}
-    TMPDIR={{ tmp }} cargo fmt --all --check
+    TMPDIR={{ tmp }} cargo fmt {{ if rust_scope == "gnome" { rust_packages } else { "--all" } }} --check
 
 # Check every Cargo target
 check:
     mkdir -p {{ tmp }}
-    TMPDIR={{ tmp }} cargo check --locked --workspace --all-targets
+    TMPDIR={{ tmp }} cargo check --locked {{ rust_packages }} --all-targets
 
 # Check Clippy warnings
 clippy:
     mkdir -p {{ tmp }}
-    TMPDIR={{ tmp }} cargo clippy --locked --workspace --all-targets -- -D warnings
+    TMPDIR={{ tmp }} cargo clippy --locked {{ rust_packages }} --all-targets -- -D warnings
 
 lint-workflow:
     jactionlint .github/workflows/*.yml
@@ -229,7 +231,7 @@ coverage-rust-run filter:
     test $(wc -l < macos/adapter/tests/support/keychain.rs) -le 9
     test $(wc -l < macos/platform/tests/support/keychain.rs) -le 9
     mkdir -p {{ tmp }}
-    TMPDIR={{ tmp }} TMB_EXTENSION_DIR={{ root }}/target/js-coverage/extension TMB_JS_COVERAGE_DIR={{ root }}/target/js-coverage/runs NEXTEST_STATUS_LEVEL=fail NEXTEST_SHOW_PROGRESS=none RUSTC_BOOTSTRAP=1 cargo llvm-cov nextest --workspace --locked --features fixture-api --branch --json --no-default-ignore-filename-regex --ignore-filename-regex '{{ rust_coverage_ignore }}' --profile {{ nextest_profile }} --output-path target/coverage-detailed.json -E '{{ filter }}'
+    TMPDIR={{ tmp }} TMB_EXTENSION_DIR={{ root }}/target/js-coverage/extension TMB_JS_COVERAGE_DIR={{ root }}/target/js-coverage/runs NEXTEST_STATUS_LEVEL=fail NEXTEST_SHOW_PROGRESS=none RUSTC_BOOTSTRAP=1 cargo llvm-cov nextest {{ rust_packages }} --locked --features fixture-api --branch --json --no-default-ignore-filename-regex --ignore-filename-regex '{{ rust_coverage_ignore }}' --profile {{ nextest_profile }} --output-path target/coverage-detailed.json -E '{{ filter }}'
     jq -r '.data[0].totals | "LLVM raw lines: \(.lines.covered)/\(.lines.count)\nLLVM raw branches: \(.branches.covered)/\(.branches.count)"' target/coverage-detailed.json
     TMPDIR={{ tmp }} RUSTC_BOOTSTRAP=1 cargo llvm-cov report --branch --lcov --no-default-ignore-filename-regex --ignore-filename-regex '{{ rust_coverage_ignore }}' --output-path target/coverage.lcov
     TMPDIR={{ tmp }} node gnome/extension/tests/support/coverage.ts report-rust
@@ -399,7 +401,7 @@ logs:
 [working-directory('macos')]
 macos-test-scripts: macos-test-python
     mkdir -p {{ tmp }}
-    for test in commit-verdict desktop-guard render-capture ui-test-inventory; do TMPDIR={{ tmp }} bash "Scripts/test-$test.sh"; done
+    for test in ci-change-base commit-verdict desktop-guard render-capture ui-test-inventory; do TMPDIR={{ tmp }} bash "Scripts/test-$test.sh"; done
 
 # Build the package
 [group('macos')]

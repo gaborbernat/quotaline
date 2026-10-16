@@ -123,16 +123,14 @@ jobs:
         env:
           UI_GROUP: ${{ inputs.group }}
           SHARDS: ${{ inputs.shards }}
-        # Seconds each group takes on macOS 26; groups whose tests were merged or sped up carry estimates until a run
-        # measures them from the retained ui-test.log timings. With shards, the longest groups go first into the least
-        # loaded shard, so the shards finish close together; a group missing from the table counts as two minutes.
+        # macOS 26 timings from run 38876303437 keep the four shards balanced without dropping any groups.
         run: |
           Scripts/check-ui-test-inventory.sh
           echo "shards=$(jq -c --argjson shards "$SHARDS" '
-            {"file-choosers":40,"history":73,"lifecycle":180,"provider-access":236,"settings-about":86,
-             "settings-data":53,"settings-log":119,"settings-menu-bar":140,"settings-models":200,
-             "settings-notifications":91,"settings-providers":230,"text-narrow-dark":260,"text-narrow-light":260,
-             "text-wide-dark":300,"text-wide-light":300,"tooltips":110,"usage":83} as $seconds |
+            {"file-choosers":26,"history":83,"lifecycle":137,"provider-access":210,"settings-about":44,
+             "settings-data":50,"settings-log":83,"settings-menu-bar":106,"settings-models":148,
+             "settings-notifications":38,"settings-providers":155,"text-narrow-dark":252,"text-narrow-light":287,
+             "text-wide-dark":184,"text-wide-light":247,"tooltips":120,"usage":57} as $seconds |
             del(.performance) | keys | sort_by(if . == "lifecycle" then 0 elif . == "text-narrow-dark" then 1 else 2 end, .) |
             if $shards == 0 then map({name: ., groups: [.]})
             else

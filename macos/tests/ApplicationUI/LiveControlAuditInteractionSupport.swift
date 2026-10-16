@@ -93,7 +93,15 @@ extension LiveControlAuditUITests {
     XCTAssertTrue(waitUntil(timeout: controlTimeout) { self.isSelected(toggle) != before })
     // Toggling can remove rows and move the checkbox within its scroll view.
     XCTAssertTrue(reveal(toggle, in: surface), "Cannot reach the checkbox after toggling")
-    toggle.click()
+    var frame = toggle.frame
+    XCTAssertTrue(
+      waitUntil(timeout: controlTimeout) {
+        let current = toggle.frame
+        defer { frame = current }
+        return current == frame && toggle.isHittable
+      }, "The checkbox did not settle after toggling")
+    // Element clicks can auto-scroll a remounted checkbox out of the viewport even after hit testing succeeds.
+    toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
     XCTAssertTrue(waitUntil(timeout: controlTimeout) { self.isSelected(toggle) == before })
   }
 

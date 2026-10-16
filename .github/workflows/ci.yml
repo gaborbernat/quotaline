@@ -759,3 +759,35 @@ jobs:
           path: macos/.build/quotaline-${{ matrix.configuration }}-macos.zip
           if-no-files-found: error
           retention-days: 1
+
+  required-checks:
+    if: ${{ always() }}
+    needs:
+      - changes
+      - macos-runtimes
+      - crates-coverage
+      - lint
+      - validate
+      - dependencies
+      - build
+      - rust-tests
+      - gnome-coverage
+      - rust-coverage
+      - release
+      - macos-ffi-coverage
+      - macos-build
+      - macos-lint
+      - macos-coverage
+      - macos-package
+      - macos-rendered
+      - macos-ui
+      - macos-application
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every applicable CI job
+        env:
+          CI_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$CI_RESULTS"
+          jq -e 'all(.[]; .result == "success" or .result == "skipped")' <<< "$CI_RESULTS" >/dev/null

@@ -26,19 +26,64 @@ JavaScript after an update. Log out and back in to load the new extension code.
 Use `mise exec -- just uninstall` to remove the extension and service. Your settings and history remain in your home
 directory.
 
-## Use the panel
+At later logins, GNOME starts the enabled extension and activates the service on demand. Use GNOME Extensions to control
+whether the panel item starts at login.
 
-- **Usage** shows each provider's current limits, reset times, pace, credits, and a refresh control. Failed requests
-  keep the most recent reading and mark it stale.
-- **History** compares quota samples and local usage over time. Chart inspection, period selection, series isolation,
-  rollups, and CSV export work from retained data.
-- **Settings** controls providers, model visibility, labels, menu format, polling, notifications, history retention, and
-  local logs. Demo data lets you inspect the layout before signing in.
+Open **Settings → Demo data** to see all six provider cards without signing in. Turn demo data off before checking your
+own accounts.
 
-The six supported providers are Claude, Codex, Gemini CLI, Antigravity, Cursor, and GitHub Copilot. The service reads
-credentials already saved by their clients. It does not ask for a password or send usage data to Quotaline servers.
+## Providers
 
-While the menu is open, Ctrl+R refreshes providers, Ctrl+F focuses the Settings model filter, and Escape closes it.
+Sign in through the provider's client. Quotaline reads existing local credentials; it does not ask for passwords or
+store access tokens. Quota requests go directly to the provider.
+
+| Provider       | Credential source                                                                                        | Usage shown                                                 |
+| -------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Claude         | `~/.claude/.credentials.json` or `CLAUDE_CONFIG_DIR`                                                     | Session, weekly, model and other reported limits            |
+| Codex          | Secret Service or `~/.codex/auth.json`; respects `CODEX_HOME`                                            | Session, weekly, code review and additional reported limits |
+| Gemini CLI     | `~/.gemini/oauth_creds.json` by default; Secret Service when encrypted storage is enabled                | Per-model quota buckets                                     |
+| Antigravity    | Running IDE language server, Secret Service, CLI or XDG app credentials, or `ANTIGRAVITY_AUTH_FILE` JSON | Reported quota pools                                        |
+| Cursor         | `~/.cursor/auth.json` or Cursor's XDG `state.vscdb`                                                      | Plan, on-demand, overall and team quotas when reported      |
+| GitHub Copilot | Environment token, `copilot-cli` Secret Service item, `~/.copilot/config.json` or XDG editor credentials | Reported quota snapshots                                    |
+
+Antigravity local discovery reads only same-user process and socket metadata, then talks to the discovered loopback
+server. Its cloud fallback reads the `service=gemini`, `username=antigravity` Secret Service item, the Antigravity CLI
+credential file at `~/.gemini/antigravity-cli/antigravity-oauth-token`, the XDG `Antigravity/auth.json` file, or
+`ANTIGRAVITY_AUTH_FILE`. It uses provider tokens for requests and excludes them from the Shell process, snapshots,
+settings, history and diagnostics.
+
+Gemini follows the CLI's storage choice: the standard OAuth file, or the Secret Service item when
+`GEMINI_FORCE_ENCRYPTED_FILE_STORAGE=true` is in the service environment. `GEMINI_CLI_HOME` changes the file location.
+
+## Using the menu
+
+- **Usage** shows the latest available quota reading, reset countdown and per-provider refresh action. Failed requests
+  retain the last reading as stale.
+- **History** charts collected quota samples, Codex daily analytics and Claude local transcript metrics for today, 7, 30
+  or 60 days. Quota samples have Minute, Hour and Day rollups with local or UTC calendar grouping. Daily additive
+  metrics support stacked bars. The reading inspector steps through recorded points, and the legend can isolate a
+  series. Focus the chart and use Left and Right to move through readings; Backspace clears the selection. The service
+  caps quota chart responses at 800 points per series; chart CSV export contains every retained sample for the selected
+  period. Settings can also export all retained samples and daily analytics to a location chosen in the desktop save
+  dialog. The service stores history in SQLite for 60 days by default.
+- **Settings** controls providers, their display order, model order, polling intervals, displayed windows, short labels,
+  menu format, retention, notifications, logs and demo data. The model list can hide windows with no retained activity
+  and a current quota at zero. Provider checks run every 1–30 minutes; at most two network requests run at once. The
+  panel requests model activity and logs only while Settings is open. Each provider has connection details and a local
+  setup guide. The log view filters by level and text, copies the visible entries, updates on new entries, and can clear
+  them. Detailed refresh timing is off by default.
+- **Quick Settings** shows a cached quota snapshot in small, medium or large form. Choose the size in Settings; click
+  the tile to open Quotaline or its arrow to view the snapshot. Opening it does not fetch provider data.
+
+While the menu is open, Ctrl+R refreshes providers, Ctrl+F opens Settings with the model filter focused, and Escape
+closes the menu.
+
+Usage shows pacing, credit and spend details when providers report them. The service collects Codex daily counts,
+tokens, credits and surface metrics. It reads Claude transcript token counts, estimated costs, message counts and local
+session totals without storing message text. Token refresh is off by default. The Settings opt-in can refresh expired
+Claude Code file credentials, Codex and Gemini CLI file or Secret Service credentials, and Antigravity cloud
+credentials. Antigravity keeps its refreshed access token in memory; Cursor and Copilot credentials remain read-only.
+The service has no account or telemetry.
 
 ## Interface preview
 
@@ -50,11 +95,23 @@ These captures come from an isolated GNOME Shell test session with demo data.
 
 {{< shot gnome="gnome-settings" alt="GNOME Settings tab with provider and display controls" >}}
 
-## Data and troubleshooting
+## Data and support
 
-The service keeps settings in `~/.config/quotaline`, history in `~/.local/share/quotaline/history.sqlite3`, and a cached
-snapshot in `~/.cache/quotaline/snapshot.json`. Read service errors with `journalctl --user -u quotaline-gnome`.
+`~/.local/libexec/quotaline-gnome --usage-json` prints the last cached quota snapshot for scripts without starting the
+service or making network requests. The output contains provider IDs, plans, timestamps and quota windows; it omits
+credentials and account identities. Enabling **Settings → Write usage.json** writes the same document to
+`~/.local/share/quotaline/usage.json` after updates.
 
-To inspect current Shell code without changing the login session, run `mise exec -- just screenshots`. It writes a
-gallery under `target/shell-screenshots/` in an isolated test session. See [build from source](/contributing/build/) for
-the development setup.
+- Settings: `~/.config/quotaline/settings.json`
+- History: `~/.local/share/quotaline/history.sqlite3`
+- Snapshot: `~/.cache/quotaline/snapshot.json`
+- Logs: `journalctl --user -u quotaline-gnome`
+- Local log: `~/.local/share/quotaline/log.txt` and up to two rotated copies; Settings shows the last seven days
+
+The service creates settings, snapshot, history and exported CSV files with owner-only permissions. To report a problem,
+use [GitHub Issues](https://github.com/quotaline/quotaline/issues) and include the service log without credential
+contents.
+
+For an isolated preview and the full screenshot gallery, see
+[documentation images](/contributing/screenshots/#gnome-shell). The [build guide](/contributing/build/) covers the
+development setup.

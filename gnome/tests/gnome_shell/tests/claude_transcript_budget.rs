@@ -40,20 +40,23 @@ fn claude_transcript_scan_resumes_after_its_byte_budget() {
         )
         .await
         .unwrap();
-        let mut changes = proxy.receive_signal("Changed").await.unwrap();
-        async {
-            loop {
-                let history =
-                    history_view(&proxy, serde_json::json!({"kind":"metric","metric":"messages"})).await["history"]
-                        .take();
-                if history["series"].as_array().is_some_and(|series| !series.is_empty()) {
-                    assert_eq!(history["series"][0]["points"][0][1], 1.0);
-                    assert_eq!(history["series"][0]["points"].as_array().unwrap().len(), 1);
-                    break;
-                }
-                changes.next().await.expect("service disconnected before resumed scan");
-            }
-        }
+        let view = wait_for_reply(
+            &proxy,
+            "GetHistoryView",
+            &(
+                serde_json::json!({"kind":"metric","metric":"messages"}).to_string(),
+                "UTC",
+                0_i32,
+            ),
+            |view| {
+                view["history"]["series"]
+                    .as_array()
+                    .is_some_and(|series| !series.is_empty())
+            },
+        )
         .await;
+        let points = view["history"]["series"][0]["points"].as_array().unwrap();
+        assert_eq!(points.len(), 1);
+        assert_eq!(points[0][1], 1.0);
     });
 }

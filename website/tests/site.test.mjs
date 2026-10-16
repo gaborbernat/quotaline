@@ -42,6 +42,17 @@ test('site switches screenshots and steps with the stored desktop choice', conte
     assert.doesNotMatch(gnome, /only-macos[^-]/);
 });
 
+test('site reuses downloaded diagrams without network access', context => {
+    const {destination, result} = build(context, undefined, {
+        HTTPS_PROXY: 'http://127.0.0.1:9',
+        HTTP_PROXY: 'http://127.0.0.1:9',
+        NO_PROXY: '',
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const providers = fs.readFileSync(path.join(destination, 'contributing/providers/index.html'), 'utf8');
+    assert.match(providers, /\/js\/mermaid\.[a-f0-9]+\.js/);
+});
+
 test('site rejects an unknown desktop', context => {
     const {result} = build(context, '{{< platform windows >}}Text{{< /platform >}}');
     assert.notEqual(result.status, 0);
@@ -66,7 +77,7 @@ test('site rejects missing screenshots', context => {
     assert.match(result.stderr, /Missing screenshot images\/missing-doc-image/);
 });
 
-function build(context, addition) {
+function build(context, addition, environment = {}) {
     const temporary = path.join(root, 'target/tmp');
     fs.mkdirSync(temporary, {recursive: true});
     const scratch = fs.mkdtempSync(path.join(temporary, 'site-test-'));
@@ -82,6 +93,6 @@ function build(context, addition) {
     const destination = path.join(scratch, 'output');
     const result = spawnSync('hugo', ['--source', source, '--destination', destination,
         '--baseURL', 'https://example.invalid/en/preview/', '--minify'],
-    {encoding: 'utf8', env: {...process.env, TMPDIR: temporary}});
+    {encoding: 'utf8', env: {...process.env, TMPDIR: temporary, ...environment}});
     return {destination, result};
 }

@@ -99,3 +99,6 @@ hint = "drawing"
 
 [minify]
 minifyOutput = true
+
+[caches.getresource]
+dir = ':resourceDir/_gen/getresource'

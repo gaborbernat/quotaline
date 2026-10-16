@@ -128,14 +128,14 @@ jobs:
         env:
           UI_GROUP: ${{ inputs.group }}
           SHARDS: ${{ inputs.shards }}
-        # Average group durations from successful macOS 26 runs 38876303437 and 38913056644.
+        # Mean group durations from attempts 1 and 2 of macOS 26 run 38936891805.
         run: |
           Scripts/check-ui-test-inventory.sh
           echo "shards=$(jq -c --argjson shards "$SHARDS" '
-            {"file-choosers":27,"history":85,"lifecycle":131,"provider-access":219,"settings-about":47,
-             "settings-data":50,"settings-log":70,"settings-menu-bar":93,"settings-models":141,
-             "settings-notifications":46,"settings-providers":137,"text-narrow-dark":227,"text-narrow-light":250,
-             "text-wide-dark":224,"text-wide-light":252,"tooltips":131,"usage":60} as $seconds |
+            {"file-choosers":27,"history":63,"lifecycle":114,"provider-access":171,"settings-about":44,
+             "settings-data":46,"settings-log":48,"settings-menu-bar":90,"settings-models":159,
+             "settings-notifications":44,"settings-providers":147,"text-narrow-dark":231,"text-narrow-light":250,
+             "text-wide-dark":186,"text-wide-light":258,"tooltips":123,"usage":53} as $seconds |
             del(.performance) | keys | sort_by(if . == "lifecycle" then 0 elif . == "text-narrow-dark" then 1 else 2 end, .) |
             if $shards == 0 then map({name: ., groups: [.]})
             else

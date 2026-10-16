@@ -527,17 +527,33 @@ jobs:
         with:
           name: macos-rust-bindings
           path: macos
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            macos/.build/checkouts
-            macos/.build/repositories
-            macos/.build/artifacts
-          key: macos-swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('macos/Package.swift') }}
       - run: Scripts/select-xcode.sh
-      - run: just macos-with-hang-samples 10 "$RUNNER_TEMP/hang" just macos-coverage-prepared
+      - name: Identify the coverage toolchain
+        id: coverage-toolchain
+        shell: bash
+        run: |
+          {
+            swift --version
+            xcodebuild -version
+            xcrun --show-sdk-version
+            sw_vers
+            pwd
+          } > "$RUNNER_TEMP/coverage-toolchain"
+          echo "fingerprint=$(shasum -a 256 "$RUNNER_TEMP/coverage-toolchain" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+      - name: Restore matching coverage products
+        id: coverage-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: macos/.build/coverage
+          key: macos-native-coverage-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.coverage-toolchain.outputs.fingerprint }}-${{ hashFiles('macos/Package.swift', 'macos/src/**', 'macos/tests/**', 'macos/Generated/**', 'macos/Scripts/**', 'macos/mise.*', 'mise.*', 'justfile', '.github/workflows/ci.yml') }}
+      - name: Run all tests with fresh coverage profiles
         env:
+          COVERAGE_CACHE_HIT: ${{ steps.coverage-cache.outputs.cache-hit }}
           QUOTALINE_RENDER_ARTIFACTS: ${{ runner.temp }}/settings-render
+        run: |
+          args=()
+          if [[ "$COVERAGE_CACHE_HIT" == true ]]; then args+=(--skip-build); fi
+          just macos-with-hang-samples 10 "$RUNNER_TEMP/hang" just macos-coverage-prepared .build/coverage "${args[@]}"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ failure() }}
         with:

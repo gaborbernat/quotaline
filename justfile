@@ -460,7 +460,7 @@ macos-coverage: _tmp
 [group('macos')]
 [positional-arguments]
 [working-directory('macos')]
-macos-coverage-prepared scratch=".build" *args: _tmp
+macos-coverage-prepared scratch=".build/coverage" *args: _tmp
     #!/usr/bin/env bash
     set -euo pipefail
     source Scripts/check-test-desktop.sh

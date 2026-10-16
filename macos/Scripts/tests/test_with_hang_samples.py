@@ -7,6 +7,8 @@ import selectors
 import signal
 import subprocess
 import sys
+from io import BufferedReader
+from itertools import count
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
@@ -61,17 +63,27 @@ def test_silence_stops_command(tmp_path: Path, capfd: pytest.CaptureFixture[str]
     assert "No test output" in capfd.readouterr().err
 
 
-def test_output_renews_deadline(tmp_path: Path) -> None:
-    """A slow but reporting test should outlive a single idle interval."""
-    result: Final = main(
-        [
-            "0.004",
-            str(tmp_path),
-            sys.executable,
-            "-c",
-            "import time;[print(i,flush=True) or time.sleep(.1) for i in range(4)]",
-        ]
+def test_output_renews_deadline(tmp_path: Path, mocker: MockerFixture) -> None:
+    """A controlled clock keeps runner load from turning progress into a timeout."""
+    process: Final = mocker.create_autospec(
+        subprocess.Popen, instance=True, pid=123, stdout=mocker.create_autospec(BufferedReader, instance=True)
     )
+    process.__enter__.return_value = process
+    process.poll.return_value = None
+    process.wait.return_value = 0
+    mocker.patch("subprocess.Popen", autospec=True, return_value=process)
+    selector: Final = mocker.create_autospec(selectors.DefaultSelector, instance=True)
+    selector.__enter__.return_value = selector
+    readable: Final = [(selectors.SelectorKey(1, 1, selectors.EVENT_READ, None), selectors.EVENT_READ)]
+    selector.select.side_effect = [readable, []] * 4 + [readable]
+    mocker.patch("selectors.DefaultSelector", autospec=True, return_value=selector)
+    mocker.patch("time.monotonic", autospec=True, side_effect=count(step=10))
+    mocker.patch("os.read", autospec=True, side_effect=[f"{index}\n".encode() for index in range(4)] + [b""])
+    mocker.patch("os.killpg", autospec=True)
+    mocker.patch("psutil.Process", autospec=True, side_effect=psutil.NoSuchProcess(process.pid))
+
+    result: Final = main(["0.5", str(tmp_path), "test-command"])
+
     assert (result, (tmp_path / "output.log").read_text()) == (0, "0\n1\n2\n3\n")
 
 

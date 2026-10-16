@@ -769,12 +769,13 @@ export async function run({
         await capture('history-credits-hidden');
         if (!containsText(page, 'gpt-5.3-codex') || !containsText(page, 'gpt-5.3-codex-spark'))
             throw new Error('Model credit legend is incomplete');
-        let restoreSeries: TestActor | null = null;
-        await waitOrFail(
-            () => (restoreSeries = findActor(page, actor => accessibleName(actor)?.startsWith('☐ gpt-5.3-codex ·'))),
-            'Model series restore toggle is missing',
-        );
-        required<TestActor>(restoreSeries).emit('clicked', 1);
+        await waitOrFail(() => {
+            const restore = findActor(page, actor => accessibleName(actor)?.startsWith('☐ gpt-5.3-codex ·'));
+            if (!restore) return false;
+            // The next service signal can replace this actor before an awaiting continuation runs.
+            restore.emit('clicked', 1);
+            return true;
+        }, 'Model series restore toggle is missing');
         await waitOrFail(
             () => !serviceSettings().history_hidden_keys.includes('codex:gpt-5.3-codex'),
             'Model series could not be restored',

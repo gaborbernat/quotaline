@@ -9,9 +9,13 @@ export GITHUB_STEP_SUMMARY="$probe/summary" REPOSITORY=quotaline/quotaline PATH=
 mkdir -p "$probe/bin"
 cat > "$probe/bin/gh" << 'STUB'
 #!/usr/bin/env bash
+if [[ "$*" == *--slurp* && "$*" == *--jq* ]]; then
+  echo '--slurp cannot be combined with --jq' >&2
+  exit 1
+fi
 case "$*" in
   */commits/*) echo 3d3c42e5aac5ba805825da76410c181273ba90b1 ;;
-  *) cat "$RUNS" ;;
+  *) jq -n --slurpfile runs "$RUNS" '[{workflow_runs: $runs[0]}]' ;;
 esac
 STUB
 chmod +x "$probe/bin/gh"

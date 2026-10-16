@@ -5,7 +5,7 @@ ref="${1:?usage: check-commit-verdict.sh <ref>}"
 : "${REPOSITORY:?}"
 
 sha="$(gh api "repos/$REPOSITORY/commits/$ref" --jq .sha)"
-runs="$(gh api --paginate --slurp "repos/$REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$sha&per_page=100" --jq '[.[].workflow_runs[]]')"
+runs="$(gh api --paginate --slurp "repos/$REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$sha&per_page=100" | jq '[.[].workflow_runs[]]')"
 
 # A cancelled run carries no verdict either way, and pushing to a branch cancels the runs its own commits started, so
 # the newest run that reached a conclusion decides. A re-run that repaired an infrastructure failure counts, and a

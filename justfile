@@ -141,7 +141,7 @@ smoke: extension-build
 # Refresh the main visual review gallery
 screenshots: extension-build
     mkdir -p {{ tmp }}
-    TMB_SCREENSHOT_ALL=1 TMB_VIRTUAL_MONITOR=1600x838 TMPDIR={{ tmp }} cargo nextest run --locked --features fixture-api --profile ci-hosted --test gnome_shell -j 1 -E 'test(demo_usage_and_history_reach_shell) | test(demo_settings_reach_shell) | test(demo_formats_and_lifecycle_reach_shell)'
+    TMB_SCREENSHOT_ALL=1 TMB_VIRTUAL_MONITOR=1280x838 TMPDIR={{ tmp }} cargo nextest run --locked --features fixture-api --profile ci-hosted --test gnome_shell -j 1 -E 'test(demo_usage_and_history_reach_shell) | test(demo_settings_reach_shell) | test(demo_formats_and_lifecycle_reach_shell)'
 
 # Run both Rust and Shell line and branch coverage gates
 coverage:

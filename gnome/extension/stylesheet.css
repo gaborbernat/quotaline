@@ -33,10 +33,9 @@
 
 .tmb-root { spacing: 0; }
 .tmb-root-narrow .tmb-header { padding: 4px 8px; }
-.tmb-root-narrow .tmb-tab { min-width: 0; padding: 3px 8px; font-size: 9pt; }
+.tmb-root-narrow .tmb-tab { width: 88px; font-size: 9pt; }
 .tmb-root-narrow .tmb-tab-content { spacing: 4px; }
 .tmb-root-compact-header .tmb-header-info { width: 165px; }
-.tmb-root-compact-header .tmb-tab { min-width: 0; padding: 3px 9px; }
 .tmb-root-narrow .tmb-page { padding: 8px 12px 12px; }
 .tmb-root-narrow .tmb-footer { padding: 7px 8px; }
 .tmb-root-narrow .tmb-history-label { min-width: 44px; }
@@ -46,7 +45,7 @@
 .tmb-header-heading { spacing: 1px; }
 .tmb-header-updated, .tmb-header-activity { font-size: 8pt; opacity: 0.68; }
 .tmb-tabs { spacing: 0; border: 1px solid rgba(128,128,128,0.38); border-radius: 8px; }
-.tmb-tab { min-width: 0; padding: 3px 15px; font-size: 10pt; text-align: center; }
+.tmb-tab { width: 92px; padding: 3px 0; font-size: 10pt; text-align: center; }
 .tmb-tab-content { spacing: 5px; }
 .tmb-tab:hover { background-color: rgba(128,128,128,0.16); }
 .tmb-tab-selected, .tmb-tab-selected:hover { background-color: rgba(160,160,160,0.42); color: white; font-weight: bold; border-radius: 6px; }

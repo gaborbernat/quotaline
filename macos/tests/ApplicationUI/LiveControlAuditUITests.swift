@@ -396,9 +396,8 @@ final class LiveControlAuditUITests: XCTestCase {
       waitUntil(timeout: 0.25) {
         applicationWindows(processIdentifier: processIdentifier).allSatisfy { baseline[$0.key] != nil }
       }, "Scrolling left a tooltip on screen")
-    let scrolledControl = try XCTUnwrap(
-      tooltipCandidates(in: surface).first(where: { $0.1.isHittable })?.1,
-      "No hittable tooltip control after scrolling")
+    let scrolledControl = verification.application.buttons["footer-refresh"]
+    XCTAssertTrue(waitUntil(timeout: controlTimeout) { scrolledControl.isHittable })
     let scrolledBaseline = applicationWindows(processIdentifier: processIdentifier)
     scrolledControl.hover()
     let scrolledTooltip = try waitForTooltip(

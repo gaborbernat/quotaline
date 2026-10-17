@@ -8,9 +8,9 @@ pub fn demo_analytics_at(id: &str, now: DateTime<Utc>, days: u32, long_text: boo
         return None;
     }
     let mut points = Vec::new();
-    for (index, offset) in (0..days).rev().enumerate() {
+    for offset in (0..days).rev() {
         let day = demo_day(now, offset);
-        let activity = demo_activity(index);
+        let activity = demo_activity(offset);
         let mut push = |metric: &str, series: &str, value: f64| {
             points.push(Point {
                 day: day.clone(),
@@ -60,8 +60,9 @@ fn demo_day(now: DateTime<Utc>, offset: u32) -> String {
     (now - Duration::days(i64::from(offset))).format("%Y-%m-%d").to_string()
 }
 
-fn demo_activity(index: usize) -> f64 {
-    0.55 + 0.45 * (index as f64 * 1.7 + 0.4).sin() * (index as f64 * 0.6).sin()
+fn demo_activity(offset: u32) -> f64 {
+    let day = f64::from(offset);
+    0.55 + 0.45 * (day * 1.7 + 0.4).sin() * (day * 0.6).sin()
 }
 
 #[cfg(test)]

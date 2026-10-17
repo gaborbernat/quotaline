@@ -32,5 +32,11 @@
 
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', paintIcon);
   paintIcon();
+  const nav = document.querySelector('.nav');
+  const active = nav?.querySelector('[aria-current="page"], .section-current');
+  if (nav && active && window.matchMedia('(max-width: 1240px)').matches) {
+    const position = active.getBoundingClientRect().left - nav.getBoundingClientRect().left + nav.scrollLeft;
+    nav.scrollLeft = position - (nav.clientWidth - active.clientWidth) / 2;
+  }
   requestAnimationFrame(() => body.classList.remove('preload'));
 })();

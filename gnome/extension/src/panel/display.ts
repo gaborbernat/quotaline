@@ -273,7 +273,7 @@ export const displayMethods = {
             );
         }
         this._compact = width < 790;
-        this._headerInfo.visible = width >= 800;
+        this._headerInfo.visible = width >= 480;
         this._headerBalance.visible = width >= 800;
         if (width < 800) this._root.add_style_class_name('tmb-root-compact-header');
         else this._root.remove_style_class_name('tmb-root-compact-header');

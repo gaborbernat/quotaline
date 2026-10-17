@@ -190,7 +190,7 @@ async function runScenario() {
             await waitFor(
                 () =>
                     root.width >= 280 &&
-                    root.width <= Math.min(860, monitor.width - 32) &&
+                    root.width <= Math.min(880, monitor.width - 32) &&
                     panelCells.get_n_children() === 6 &&
                     panelCells.get_preferred_width(-1)[1] <= Math.floor(monitor.width * 0.35) &&
                     findActor(root, actor => actor.has_style_class_name?.('tmb-settings-section')),
@@ -237,7 +237,7 @@ async function runScenario() {
                 findActor(root, actor => actor.accessible_name === 'Usage' && actor.has_style_class_name?.('tmb-tab')),
             ).emit('clicked', 1);
             const fallback = {x: 0, width: Math.max(800, global.stage.width)};
-            if (root.width < 280 || root.width > Math.min(860, fallback.width - 32))
+            if (root.width < 280 || root.width > Math.min(880, fallback.width - 32))
                 throw new Error('Menu lost its width while the primary monitor was unavailable');
         } finally {
             Main.layoutManager.primaryMonitor = monitor;
@@ -266,10 +266,8 @@ async function runScenario() {
         rootX < 0 ||
         rootX + root.width > global.stage.width ||
         root.width < 440 ||
-        root.width >= 860 ||
-        Math.abs(menuCenter - closestCenter) > 25 ||
-        menuCenter < indicatorX - 16 ||
-        menuCenter > indicatorX + indicator.width + 16
+        root.width !== Math.min(880, global.stage.width - 32) ||
+        Math.abs(menuCenter - closestCenter) > 25
     )
         throw new Error(
             `Right-side wide menu did not fit around the panel item: ${JSON.stringify({

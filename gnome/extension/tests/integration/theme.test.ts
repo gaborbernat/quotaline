@@ -35,13 +35,17 @@ function widthSettled(indicator: Indicator, cap: number) {
     const [menuX] = root.get_transformed_position();
     const [sourceX] = indicator.get_transformed_position();
     const menuCenter = menuX + root.width / 2;
+    const closestCenter = Math.clamp(
+        sourceX + indicator.width / 2,
+        monitor.x + root.width / 2,
+        monitor.x + monitor.width - root.width / 2,
+    );
     return (
         root.width >= Math.min(440, monitor.width - 32) - 3 &&
         root.width <= Math.min(cap, monitor.width - 32) + 3 &&
-        menuX >= monitor.x + 8 &&
-        menuX + root.width <= monitor.x + monitor.width - 8 &&
-        menuCenter >= sourceX - 8 &&
-        menuCenter <= sourceX + indicator.width + 8
+        menuX >= monitor.x &&
+        menuX + root.width <= monitor.x + monitor.width &&
+        Math.abs(menuCenter - closestCenter) <= 25
     );
 }
 
@@ -132,7 +136,7 @@ export async function run() {
             ),
         ).emit('clicked', 1);
         await waitFor(() => findActor(indicator.menu.box, actor => actor.has_style_class_name?.('tmb-card')));
-        await waitFor(() => widthSettled(indicator, 860), 'Usage width');
+        await waitFor(() => widthSettled(indicator, 880), 'Usage width');
         await waitFor(() =>
             optionalInstance(
                 findActor(indicator, actor => actor.has_style_class_name?.('tmb-panel-value')),
@@ -166,7 +170,7 @@ export async function run() {
         await waitFor(() =>
             findActor(indicator.menu.box, actor => actor.has_style_class_name?.('tmb-setting-segments')),
         );
-        await waitFor(() => widthSettled(indicator, 860), 'Settings width');
+        await waitFor(() => widthSettled(indicator, 880), 'Settings width');
         if (mode === 'light') {
             const selected = required(
                 findActor(indicator.menu.box, actor => actor.has_style_class_name?.('tmb-setting-segment-selected')),

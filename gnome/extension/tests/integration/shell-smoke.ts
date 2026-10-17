@@ -33,7 +33,7 @@ async function runScenario() {
     const demoPhase = GLib.getenv('TMB_DEMO_PHASE');
     const source = Main.extensionManager.lookup(UUID).dir.get_uri();
     const {createChart} = (await import(`${source}/src/chart.js`)) as typeof import('../../src/chart.js');
-    const {usageColor, usageTextColor} = (await import(
+    const {usageColor, usageStatusColor, usageTextColor} = (await import(
         `${source}/src/color.js`
     )) as typeof import('../../src/color.js');
     const {SnapshotWidget} = (await import(`${source}/src/widget.js`)) as typeof import('../../src/widget.js');
@@ -329,7 +329,16 @@ async function runScenario() {
         }
     };
     if (demoPhase !== 'settings' && demoPhase !== 'formats') {
-        await runUsage({indicator, root, footer, panelCells, openWithFastClock, demoState, usageColor, usageTextColor});
+        await runUsage({
+            indicator,
+            root,
+            footer,
+            panelCells,
+            openWithFastClock,
+            demoState,
+            usageColor,
+            usageStatusColor,
+        });
         await runHistory({indicator, root, footer, openWithFastClock, press});
     }
     if (demoPhase === 'usage') return;

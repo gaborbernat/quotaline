@@ -1,7 +1,8 @@
 ---
-title: Stale widgets
+title: Widget not updating
 description: Check the build channel, snapshot and macOS refresh budget.
-weight: 5
+weight: 6
+aliases: [/troubleshooting/widgets/]
 ---
 
 Check that the distribution build and its widget use the same app group, and that the app has fetched new data. Local

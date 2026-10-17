@@ -220,10 +220,10 @@ func appControllerGrantsAccessOnlyAfterChoosingADirectory(chosen: Bool) async th
   dependencies.settings.historyRetentionDays = 7
   controller.settingsChanged()
 
+  await waitUntil { clock.sleeps.contains(AppController.retentionDebounce) }
   dependencies.settings.historyRetentionDays = 60
-  await mainActorTurn()
   clock.advance(by: AppController.retentionDebounce)
-  await mainActorTurn()
+  await controller.retentionTask?.value
 
   #expect(try await history.stats().sampleCount == 3)
   #expect(!dependencies.log.text.contains("history retention updated"))

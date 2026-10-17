@@ -170,10 +170,10 @@ export const historyContentMethods = {
             return Clutter.EVENT_PROPAGATE;
         });
         chart.add_action_full('tmb-history-arrows', Clutter.EventPhase.CAPTURE, keys);
-        const sideLegend = layoutWidth - 36 - 12 - 240 >= 600;
+        const sideLegend = layoutWidth - 36 - 12 - 240 >= 580;
         chart.width = Math.max(210, layoutWidth - (sideLegend ? 288 : veryNarrow ? 44 : 36));
         chart.x_align = Clutter.ActorAlign.START;
-        chart.height = Math.max(280, Math.min(480, this._panelMonitor().height - 350));
+        chart.height = Math.max(280, Math.min(440, this._panelMonitor().height - 390));
         const visual = box(!sideLegend, 'tmb-history-visual');
         visual.x_align = Clutter.ActorAlign.START;
         const plot = box(true, 'tmb-history-plot');

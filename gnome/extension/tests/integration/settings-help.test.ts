@@ -90,7 +90,7 @@ export async function run() {
             }[mode] ?? 'zero-usage models';
         const target = (actor: TestActor) =>
             footer
-                ? buttonLabel(actor) === '↻  Refresh'
+                ? buttonLabel(actor) === 'Refresh'
                 : mode === 'filter'
                   ? actor.hint_text === name
                   : mode === 'meter'

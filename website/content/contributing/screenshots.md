@@ -12,8 +12,9 @@ just macos-shots
 
 The script rebuilds the app, then runs `--export-menubar` and `--export-popover` with isolated demo state, disabled
 network transport and mock credentials. It waits for History data before drawing. The eight WebP assets cover the menu
-bar and three tabs in both appearances, bounded to a laptop-sized viewport. Commit them with UI changes that affect the
-documented screens; website CI builds those assets but does not regenerate them.
+bar and three tabs in both appearances. Each tab export expands to its measured content height, while the live panel
+still scrolls on smaller screens. Commit the assets with UI changes that affect the documented screens; website CI
+builds them but does not regenerate them.
 
 Use `APP_BINARY=/absolute/path/to/Quotaline just macos-shots` only to capture a binary you have verified matches the
 source. Compare Settings > About's source version with the binary you intend to document. Inspect the full images for
@@ -40,23 +41,26 @@ fresh Shell in an isolated test session. For manual interaction, run `mise exec 
 window when finished. The manual preview starts a second desktop portal under your account, which can make RustDesk
 select the wrong Wayland session. Do not use it for automated tests.
 
-Refresh the full headless Shell gallery in `target/shell-screenshots/` with `mise exec -- just screenshots`. These
-include the top, middle and bottom of Usage, History and Settings, each menu bar format, and all three Quick Settings
-snapshot sizes. Narrow monitor captures include Usage and the top and bottom of History and Settings. Each open popover
-capture also has a `-menu.png` crop for side-by-side comparison with the macOS reference. These can be reviewed without
-restarting the desktop session. `claude-organization-menu.png` and `claude-masked-menu.png` show the account chips
-before and after the privacy setting. `quota-help.png` shows the quota tooltip with usage, remaining amount and pace
-detail. `settings-help.png` shows contextual help on the menu bar controls; `demo-help.png` and `notifications-help.png`
-show help in the lower Settings sections. `log-help.png` shows help on the Log severity control.
+The command writes the headless Shell gallery to `target/shell-screenshots/`. It captures Usage, History and Settings at
+several scroll positions, menu bar formats, Quick Settings sizes and narrow monitors. Open popover captures include
+`-menu.png` crops for comparison with macOS. The website's GNOME images come from these unscaled menu crops; review the
+raw output before converting it to WebP.
 
-`history-help.png` shows metric help in the History view. `panel-help.png` shows the status item summary on hover.
-`footer-help.png` shows help placed above its footer control. `history-empty.png` shows History before any readings have
-been recorded. `settings-provider-details-menu.png` shows the expanded credential source and setup control.
-`history-hovered-menu.png` shows the chart with one legend series highlighted. `history-keyboard-selected-menu.png`
-shows a reading selected from the chart with the keyboard. `usage-light.png`, `history-light.png`, `settings-light.png`,
-`usage-high-contrast.png`, `history-high-contrast.png` and `settings-high-contrast.png` show the menu under GNOME's
-light and high contrast settings. `stale-claude-setup-light-card.png` shows a retained reading and its muted panel value
-under the light setting. `provider-visibility-mixed.png`, `provider-visibility-empty.png`, and
-`settings-undiscovered-provider.png` show provider discovery and setup controls without logging out.
-`settings-full-log-sparse-menu.png` and `local/settings-full-log-retained-menu.png` show the expanded log with one and
-many entries.
+The tab captures are 880 logical pixels wide and expand vertically to show their full content. macOS exports at 2×;
+GNOME Shell captures at 1× on a tall isolated display. The status strips are 520 logical pixels wide. macOS draws a
+28-pixel menu bar at 3×; GNOME Shell captures its 32-pixel top bar at 1×, with the menu closed and the button unhovered.
+Compare them at logical size, not raw pixel size. The `menubar-comparison.png` capture selects Claude session, weekly,
+Fable and Sonnet, then Codex session and weekly, in provider order, matching the macOS export. Both History captures use
+30 days with daily buckets. Usage percentages and reset times depend on the capture clock.
+
+Use the filename to find a specific state:
+
+| Prefix or example                                                                     | What it shows                                                     |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `usage-*`, `history-*`, `settings-*`                                                  | Main flows and scroll positions.                                  |
+| `*-light.png`, `*-high-contrast.png`                                                  | GNOME appearance variants.                                        |
+| `*-help.png`                                                                          | Tooltips for quota, panel, footer, History and Settings controls. |
+| `claude-organization-menu.png`, `claude-masked-menu.png`                              | Account chips before and after privacy masking.                   |
+| `history-empty.png`, `history-hovered-menu.png`, `history-keyboard-selected-menu.png` | Empty, pointer and keyboard chart states.                         |
+| `provider-visibility-*.png`, `settings-undiscovered-provider.png`                     | Provider discovery and setup controls.                            |
+| `settings-full-log-sparse-menu.png`, `local/settings-full-log-retained-menu.png`      | Expanded logs with one or many entries.                           |

@@ -1,0 +1,48 @@
+- id: macos
+  name: macOS
+  navIcon: M3 5h18v12H3zM8 21h8m-4-4v4
+  label: macOS 15, 26 and 27
+  requires: macOS 15+
+  title: Menu bar app
+  summary: A SwiftUI panel, desktop widgets and native notifications.
+  startTitle: Install the app
+  startSummary: Choose a direct download, Homebrew or the App Store.
+  action: Install on macOS
+  install: macos/install/
+  cardImage: images/menubar-%s.webp
+  cardAlt: Quota cells in the macOS menu bar
+  cardScale: 3
+  cardClass: shot-bar
+  cardUsageImage: images/popover-usage-%s.webp
+  cardUsageAlt: Quotaline macOS Usage panel
+  cardUsageScale: 2
+  variants: [light, dark]
+  overviewImage: images/popover-usage-%s.webp
+  overviewAlt: Quotaline macOS Usage panel
+  overviewScale: 2
+  gallery: [Usage, History, Settings]
+  galleryImage: images/popover-%s-%s.webp
+
+- id: gnome
+  name: GNOME
+  navIcon: M3 4h18v3H3zM3 9h18v11H3zM7 13h4m-4 3h6
+  label: GNOME Shell 50
+  requires: GNOME Shell 50
+  title: Shell extension
+  summary: A panel menu, Quick Settings tile and local Rust service.
+  startTitle: Install the extension
+  startSummary: Build the Shell extension and local Rust service.
+  action: Install on GNOME
+  install: gnome/install/
+  cardImage: images/gnome-menubar.webp
+  cardAlt: Quota cells in the GNOME top bar
+  cardScale: 1
+  cardClass: shot-bar
+  cardUsageImage: images/gnome-usage.webp
+  cardUsageAlt: Quotaline GNOME Shell Usage menu
+  cardUsageScale: 1
+  overviewImage: images/gnome-usage.webp
+  overviewAlt: Quotaline GNOME Shell Usage menu
+  overviewScale: 1
+  gallery: [Usage, History, Settings]
+  galleryImage: images/gnome-%s.webp

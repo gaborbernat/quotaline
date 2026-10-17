@@ -198,7 +198,7 @@ fn cursor_spend_without_amounts_shows_unavailable_summary() {
 
 #[cfg(feature = "fixture-api")]
 #[test]
-fn cursor_exhausted_limit_uses_the_muted_palette_in_shell() {
+fn cursor_exhausted_limit_uses_the_warning_color_in_shell() {
     cursor_shell_fixture(
         serde_json::json!({"individualUsage":{"plan":{"enabled":true,"used":100,"limit":100,"remaining":0}}}),
         "extension/tests/integration/cursor-high-use.test.js",
@@ -208,7 +208,7 @@ fn cursor_exhausted_limit_uses_the_muted_palette_in_shell() {
 
 #[cfg(feature = "fixture-api")]
 #[test]
-fn cursor_at_limit_format_shows_reset_in_muted_text() {
+fn cursor_at_limit_format_shows_reset_in_warning_color() {
     let reset = (chrono::Utc::now() + chrono::Duration::hours(2)).to_rfc3339();
     cursor_shell_fixture(
         serde_json::json!({"billingCycleEnd":reset,"individualUsage":{"plan":{"enabled":true,"used":100,"limit":100,"remaining":0}}}),

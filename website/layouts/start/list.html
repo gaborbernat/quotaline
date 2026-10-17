@@ -1,0 +1,19 @@
+{{ define "main" }}
+<section class="page page-wide start-page">
+  <div class="wrap">
+    <span class="section-kicker">Get started</span>
+    <h1 class="page-title">Choose a frontend</h1>
+    <p class="page-lede">Pick an interface, then connect a provider.</p>
+    {{ partial "platform-cards.html" (dict "start" true) }}
+    <div class="start-next">
+      <h2>Connect and choose models</h2>
+      <ol>
+        <li><a href="{{ "start/connect/" | relURL }}">Connect a provider</a> through its existing client session.</li>
+        <li>Choose models and short labels in <a href="{{ "reference/settings/menu-bar/" | relURL }}">Display settings</a>.</li>
+        <li>Read limits in <a href="{{ "reference/usage/" | relURL }}">Usage</a> or compare periods in <a href="{{ "reference/history/" | relURL }}">History</a>.</li>
+      </ol>
+      <p>Demo data is off by default. Settings > About can show sample readings without signing in.</p>
+    </div>
+  </div>
+</section>
+{{ end }}

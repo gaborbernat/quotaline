@@ -1,7 +1,8 @@
 ---
-title: Installation and demo mode
+title: Update and demo issues
 description: Identify local builds, update behavior and isolated sample sessions.
-weight: 6
+weight: 5
+aliases: [/troubleshooting/application/]
 ---
 
 ## Local update errors

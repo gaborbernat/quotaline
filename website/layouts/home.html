@@ -1,54 +1,89 @@
 {{ define "main" }}
 <section class="hero">
-  <div class="wrap">
-    <div>
-      <span class="eyebrow">{{ .Site.Params.minimumOS }} · {{ .Site.Params.license }}</span>
-      <h1>{{ .Site.Params.tagline }}</h1>
-      <p class="lede">{{ .Site.Params.description }}</p>
-      <div class="hero-actions">
-        <a class="button button-primary" href="{{ "start/" | relURL }}">Get started</a>
-        <a class="button button-secondary" href="{{ .Site.Params.latestRelease }}">Release availability</a>
+  <div class="wrap hero-grid" data-gallery>
+    <div class="hero-copy">
+      <span class="eyebrow">Quotaline · coding plan usage</span>
+      <h1>Know your quota before you hit it.</h1>
+      <div class="hero-selector">
+        <div class="platform-gallery-tabs" role="tablist" aria-label="Preview frontend">
+          <button type="button" role="tab" id="hero-tab-all" aria-controls="hero-panel-all"
+            aria-selected="true" tabindex="0">All</button>
+          {{ range hugo.Data.platforms }}
+            <button type="button" role="tab" id="hero-tab-{{ .id }}" aria-controls="hero-panel-{{ .id }}"
+              aria-selected="false" tabindex="-1">{{ .name }}</button>
+          {{ end }}
+        </div>
       </div>
-      <p class="hero-note">
-        Reads credentials stored by your provider clients. No Quotaline account or telemetry.
-        The preview image shows macOS; GNOME uses a Shell panel extension.
-      </p>
+      <p class="lede">See coding plan limits, reset times and usage history where you work. Claude, Codex, Gemini, Antigravity, Cursor and Copilot share one view.</p>
+      <div class="hero-actions">
+        {{ range hugo.Data.platforms }}
+          <a class="button button-secondary" href="{{ printf "%s/" .id | relURL }}">Explore {{ .name }} <span aria-hidden="true">↗</span></a>
+        {{ end }}
+      </div>
+      <p class="hero-note">Reads your existing provider sessions. No Quotaline account or telemetry.</p>
     </div>
     <div class="hero-media">
-      {{ range $variant := (slice "light" "dark") }}
-        {{ with resources.Get (printf "images/menubar-%s.webp" $variant) }}
-          {{ partial "shot-image.html" (dict
-               "image" . "scale" 3 "fetchpriority" "high"
-               "alt" "Menu bar showing Claude and Codex usage cells"
-               "class" (printf "shot shot-bar only-%s" $variant)) }}
+      <div class="hero-panel hero-panel-all" role="tabpanel" id="hero-panel-all" aria-labelledby="hero-tab-all">
+        {{ range hugo.Data.platforms }}
+          <div class="hero-preview">
+            {{ $platform := . }}
+            {{ if .variants }}
+              {{ range $variant := .variants }}
+                {{ $path := printf $platform.overviewImage $variant }}
+                {{ with resources.Get $path }}
+                  {{ partial "shot-image.html" (dict "image" . "scale" $platform.overviewScale
+                       "alt" $platform.overviewAlt "loading" "lazy" "class" (printf "shot only-%s" $variant)) }}
+                {{ end }}
+              {{ end }}
+            {{ else }}
+              {{ with resources.Get .overviewImage }}
+                {{ partial "shot-image.html" (dict "image" . "scale" $platform.overviewScale
+                     "alt" $platform.overviewAlt "loading" "lazy" "class" "shot") }}
+              {{ end }}
+            {{ end }}
+            <span>{{ .name }} · Usage</span>
+          </div>
         {{ end }}
+      </div>
+      {{ range hugo.Data.platforms }}
+        {{ $platform := . }}
+        <div class="hero-panel" role="tabpanel" id="hero-panel-{{ .id }}"
+          aria-labelledby="hero-tab-{{ .id }}" hidden>
+          {{ if .variants }}
+            {{ range $variant := .variants }}
+              {{ $path := printf $platform.overviewImage $variant }}
+              {{ with resources.Get $path }}
+                {{ partial "shot-image.html" (dict "image" . "scale" $platform.overviewScale
+                     "alt" $platform.overviewAlt "loading" "lazy" "class" (printf "shot only-%s" $variant)) }}
+              {{ end }}
+            {{ end }}
+          {{ else }}
+            {{ with resources.Get .overviewImage }}
+              {{ partial "shot-image.html" (dict "image" . "scale" $platform.overviewScale
+                   "alt" $platform.overviewAlt "loading" "lazy" "class" "shot") }}
+            {{ end }}
+          {{ end }}
+          <span class="hero-media-label">{{ .name }} · Usage</span>
+        </div>
       {{ end }}
     </div>
   </div>
 </section>
 
-<section class="section">
+<section class="platform-section" aria-labelledby="platform-heading">
   <div class="wrap">
     <div class="section-head">
-      <h2>Choose your desktop</h2>
-      <p>The same providers and quota rules feed native interfaces on both platforms.</p>
+      <span class="section-kicker">Choose a frontend</span>
+      <h2 id="platform-heading">Choose how to view your quota.</h2>
+      <p>Each frontend uses the same provider data and history rules.</p>
     </div>
-    <div class="cards">
-      <a class="card card-link" href="{{ "start/" | relURL }}">
-        <h3>macOS</h3>
-        <p>Menu bar app, SwiftUI popover, WidgetKit snapshots and native notifications.</p>
-      </a>
-      <a class="card card-link" href="{{ "gnome/" | relURL }}">
-        <h3>GNOME</h3>
-        <p>Shell panel item, Usage, History and Settings popover, and Quick Settings tile.</p>
-      </a>
-    </div>
+    {{ partial "platform-cards.html" (dict "start" false) }}
   </div>
 </section>
 
-<div class="providers">
+<section class="providers" aria-label="Supported providers">
   <div class="wrap">
-    <span>Tracks</span>
+    <span>Works with</span>
     {{ range $p := (slice
       (dict "id" "claude" "name" "Claude") (dict "id" "codex" "name" "Codex")
       (dict "id" "gemini" "name" "Gemini CLI") (dict "id" "antigravity" "name" "Antigravity")
@@ -59,82 +94,48 @@
         {{ $p.name }}
       </a>
     {{ end }}
-    <span class="legend">
-      <span><i class="g"></i> lower usage</span>
-      <span><i class="o"></i> higher usage</span>
-      <span><i class="r"></i> near the limit</span>
-    </span>
   </div>
-</div>
+</section>
 
-<section class="section">
+<section class="section" aria-labelledby="shared-heading">
   <div class="wrap">
     <div class="section-head">
-      <h2>Quota and reset times beside your work</h2>
-      <p>Provider-reported limits and local analytics, with source coverage made explicit.</p>
+      <span class="section-kicker">Shared across frontends</span>
+      <h2 id="shared-heading">Quota, history and privacy</h2>
     </div>
-    <div class="cards">
-      {{ range hugo.Data.features }}
-        <div class="card">
-          <div class="card-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="{{ .icon }}" />
-            </svg>
-          </div>
-          <h3>{{ .title }}</h3>
-          <p>{{ .body }}</p>
-        </div>
-      {{ end }}
-    </div>
-  </div>
-</section>
-
-<section class="section">
-  <div class="wrap">
-    <div class="section-head">
-      <h2>macOS popover preview</h2>
-      <p>Usage, History and Settings with sample data in a laptop-sized viewport.</p>
-    </div>
-    <div class="tabshots">
-      {{ $shots := slice
-        (dict "id" "usage" "name" "Usage" "alt" "Usage tab with provider cards"
-          "caption" "Each window with percent, reset countdown and pace.")
-        (dict "id" "history" "name" "History" "alt" "History tab with usage charts"
-          "caption" "One metric, one chart and a complete legend; sixty days retained by default.")
-        (dict "id" "settings" "name" "Settings" "alt" "Settings tab"
-          "caption" "Menu bar format, providers, data, notifications and the log.") }}
-      {{ range $index, $shot := $shots }}
-        <input class="tabshot-input" type="radio" name="tabshot" id="tabshot-{{ $shot.id }}"
-               {{ if eq $index 0 }}checked{{ end }}>
-      {{ end }}
-      <div class="tabshot-bar">
-        {{ range $shots }}<label for="tabshot-{{ .id }}">{{ .name }}</label>{{ end }}
-      </div>
-      <div class="tabshot-panels">
-        {{ range $shots }}
-          <figure class="tabshot-panel" id="panel-{{ .id }}">
-            {{ $shot := . }}
-            <div class="tabshot-frame">
-              {{ range $variant := (slice "light" "dark") }}
-                {{ with resources.Get (printf "images/popover-%s-%s.webp" $shot.id $variant) }}
-                  {{ partial "shot-image.html" (dict
-                       "image" . "scale" 2 "alt" $shot.alt "loading" "lazy"
-                       "class" (printf "shot only-%s" $variant)) }}
-                {{ end }}
-              {{ end }}
-            </div>
-            <figcaption>{{ .caption }}</figcaption>
-          </figure>
-        {{ end }}
-      </div>
+    <div class="cards feature-cards">
+      <a class="card card-link" href="{{ "reference/usage/" | relURL }}">
+        <span class="feature-number">01 / CURRENT</span>
+        <h3>Quota and reset</h3>
+        <p>Read provider-reported limits, remaining time and restrictions in one place.</p>
+      </a>
+      <a class="card card-link" href="{{ "reference/history/" | relURL }}">
+        <span class="feature-number">02 / RECORDED</span>
+        <h3>History</h3>
+        <p>Compare quota samples and local analytics across days or weeks.</p>
+      </a>
+      <a class="card card-link" href="{{ "explanation/privacy/" | relURL }}">
+        <span class="feature-number">03 / PRIVATE</span>
+        <h3>Local by design</h3>
+        <p>Credentials stay with their clients. Readings and history stay on your machine.</p>
+      </a>
     </div>
   </div>
 </section>
 
-{{ with .Content }}
-<section class="page">
-  <div class="wrap prose">{{ . }}</div>
+<section class="docs-section" aria-labelledby="docs-heading">
+  <div class="wrap docs-grid">
+    <div>
+      <span class="section-kicker">Documentation</span>
+      <h2 id="docs-heading">Go straight to the right guide.</h2>
+      <p>Start with a frontend guide. Use the shared reference for provider data, or open Help when readings stop updating.</p>
+    </div>
+    <div class="docs-links">
+      <a href="{{ "start/" | relURL }}"><span>01</span> Get started <span aria-hidden="true">↗</span></a>
+      <a href="{{ "reference/" | relURL }}"><span>02</span> Shared reference <span aria-hidden="true">↗</span></a>
+      <a href="{{ "troubleshooting/" | relURL }}"><span>03</span> Troubleshooting <span aria-hidden="true">↗</span></a>
+      <a href="{{ "contributing/" | relURL }}"><span>04</span> Contributing <span aria-hidden="true">↗</span></a>
+    </div>
+  </div>
 </section>
-{{ end }}
 {{ end }}

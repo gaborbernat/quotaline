@@ -98,7 +98,7 @@ export async function run() {
             const left = root.get_transformed_position()[0];
             return (
                 root.width >= Math.min(440, global.stage.width - 32) &&
-                root.width <= Math.min(860, global.stage.width - 32) &&
+                root.width <= Math.min(880, global.stage.width - 32) &&
                 left >= 0 &&
                 left + root.width <= global.stage.width
             );

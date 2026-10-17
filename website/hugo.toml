@@ -20,7 +20,6 @@ rate limit,menu bar,macos menu bar app,gnome shell extension,linux\
 tagline = "Your AI coding plan limits, one glance away"
 repository = "https://github.com/quotaline/quotaline"
 latestRelease = "https://github.com/quotaline/quotaline/releases"
-minimumOS = "macOS 15 · GNOME Shell 50"
 license = "MIT"
 author = "Bernát Gábor"
 brandGradientStart = "#4C3BE0"
@@ -32,31 +31,29 @@ mermaidVersion = "12.2.0"
 name = "Get started"
 url = "/start/"
 weight = 1
+[menu.main.params]
+icon = "M4 12h16m-6-6 6 6-6 6"
 
 [[menu.main]]
-name = "GNOME"
-url = "/gnome/"
-weight = 2
-
-[[menu.main]]
-name = "Reference"
+name = "Shared"
 url = "/reference/"
-weight = 3
+weight = 2
+[menu.main.params]
+icon = "M4 5h7l2 2h7v12H4z"
 
 [[menu.main]]
-name = "Explanation"
-url = "/explanation/"
-weight = 4
-
-[[menu.main]]
-name = "Troubleshooting"
+name = "Help"
 url = "/troubleshooting/"
 weight = 5
+[menu.main.params]
+icon = "M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4m0 4h.01M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"
 
 [[menu.main]]
 name = "Contributing"
 url = "/contributing/"
 weight = 6
+[menu.main.params]
+icon = "M8 8l-4 4 4 4m8-8 4 4-4 4m-3-11-2 14"
 
 [outputs]
 home = ["HTML", "llms", "webmanifest"]
@@ -84,6 +81,9 @@ rel = "alternate"
 
 [markup.goldmark.renderer]
 unsafe = true
+
+[markup.highlight]
+noClasses = false
 
 [markup.tableOfContents]
 startLevel = 2

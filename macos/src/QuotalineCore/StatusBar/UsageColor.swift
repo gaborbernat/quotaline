@@ -47,6 +47,10 @@ public struct UsageLadder: Hashable, Sendable {
     green: HSBColor(hue: 0.38, saturation: 0.95, brightness: 0.4),
     orange: HSBColor(hue: 0.08, saturation: 1, brightness: 0.74),
     red: HSBColor(hue: 0, saturation: 1, brightness: 0.6))
+  public static let status = UsageLadder(
+    green: HSBColor(hue: 0.38, saturation: 0.7, brightness: 1),
+    orange: HSBColor(hue: 0.08, saturation: 0.78, brightness: 1),
+    red: HSBColor(hue: 0.025, saturation: 0.55, brightness: 1))
 
   public static func ladder(for contrast: UsageContrast) -> UsageLadder {
     contrast == .increased ? increased : standard
@@ -64,7 +68,14 @@ public enum UsageColor {
   }
 
   public static func color(pace: PaceStatus, percent: Double, contrast: UsageContrast = .standard) -> HSBColor {
-    let ladder = UsageLadder.ladder(for: contrast)
+    color(pace: pace, percent: percent, ladder: UsageLadder.ladder(for: contrast))
+  }
+
+  public static func statusColor(percent: Double) -> HSBColor {
+    color(pace: .unknown, percent: percent, ladder: .status)
+  }
+
+  private static func color(pace: PaceStatus, percent: Double, ladder: UsageLadder) -> HSBColor {
     switch pace {
     case .ahead: return ladder.orange
     case .exhausted: return ladder.red

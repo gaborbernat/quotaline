@@ -29,3 +29,9 @@ func usageContrastMapsTheAccessibilityFlag(increased: Bool, expected: UsageContr
   #expect(UsageContrast(increased: increased) == expected)
   #expect(UsageLadder.ladder(for: expected) == (increased ? UsageLadder.increased : UsageLadder.standard))
 }
+
+@Test func statusColoursFollowTheAccessibleLadder() {
+  #expect(UsageColor.statusColor(percent: 0) == UsageLadder.status.green)
+  #expect(UsageColor.statusColor(percent: 60) == UsageLadder.status.orange)
+  #expect(UsageColor.statusColor(percent: 100) == UsageLadder.status.red)
+}

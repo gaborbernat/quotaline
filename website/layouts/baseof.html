@@ -10,21 +10,14 @@
   {{ partial "head.html" . }}
 </head>
 
-<body class="preload theme-auto platform-macos">
-  {{/* Must stay inline and blocking, ahead of any markup: theme.js is deferred, so a reader whose stored
-       choice differs from their OS preference would paint the wrong theme, or the other desktop's screenshots,
-       first and watch them snap over. */}}
+<body class="preload theme-auto">
+  {{/* Apply the stored theme before paint; theme.js is deferred. */}}
   <script>
     (() => {
       const stored = localStorage.getItem("tmb-theme");
       if (stored === "light" || stored === "dark") {
         document.body.classList.remove("theme-auto");
         document.body.classList.add("theme-" + stored);
-      }
-      const platform = localStorage.getItem("tmb-platform");
-      const linux = /Linux/.test(navigator.userAgent) && !/Android/.test(navigator.userAgent);
-      if (platform === "gnome" || (platform !== "macos" && linux)) {
-        document.body.classList.replace("platform-macos", "platform-gnome");
       }
     })();
   </script>
@@ -48,6 +41,11 @@
     {{ end }}
   {{ else }}
     {{ with resources.Get "js/theme.js" | resources.Minify | resources.Fingerprint }}
+      <script defer src="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}" crossorigin="anonymous"></script>
+    {{ end }}
+  {{ end }}
+  {{ if or .IsHome (eq .Layout "platform") }}
+    {{ with resources.Get "js/gallery.js" | resources.Minify | resources.Fingerprint }}
       <script defer src="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}" crossorigin="anonymous"></script>
     {{ end }}
   {{ end }}

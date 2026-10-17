@@ -124,7 +124,7 @@ export async function run() {
             const center = indicator.get_transformed_position()[0] + indicator.width / 2;
             return (
                 menu.width >= 280 &&
-                menu.width <= Math.min(860, monitor.width - 32) &&
+                menu.width <= Math.min(880, monitor.width - 32) &&
                 x >= monitor.x &&
                 x + menu.width <= monitor.x + monitor.width &&
                 center >= x - 20 &&

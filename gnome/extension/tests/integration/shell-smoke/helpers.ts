@@ -188,10 +188,10 @@ export async function capture(name: string) {
           : null;
     if (!root) return;
     const [left, top] = root.get_transformed_position();
-    const x = Math.max(0, Math.floor(left) - 8);
-    const y = Math.max(0, Math.floor(top) - 8);
-    const width = Math.min(global.stage.width - x, Math.ceil(root.width) + 16);
-    const height = Math.min(global.stage.height - y, Math.ceil(root.height) + 16);
+    const x = Math.max(0, Math.floor(left));
+    const y = Math.max(0, Math.floor(top));
+    const width = Math.min(global.stage.width - x, Math.ceil(root.width));
+    const height = Math.min(global.stage.height - y, Math.ceil(root.height));
     const menuStream = Gio.File.new_for_path(GLib.build_filenamev([directory, `${name}-menu.png`])).replace(
         null,
         false,
@@ -211,6 +211,48 @@ export async function capture(name: string) {
     });
 }
 
+export async function captureStatus(name: string) {
+    const directory = GLib.getenv('TMB_SCREENSHOT_DIR');
+    if (!directory) return;
+    GLib.mkdir_with_parents(directory, 0o755);
+    const indicator = required(getIndicator());
+    const wasOpen = indicator.menu.isOpen;
+    if (wasOpen) {
+        indicator.menu.close(false);
+        indicator.set_hover(false);
+        await afterPaint(() => {});
+    }
+    try {
+        const [indicatorX] = indicator.get_transformed_position();
+        const stream = Gio.File.new_for_path(GLib.build_filenamev([directory, `${name}.png`])).replace(
+            null,
+            false,
+            Gio.FileCreateFlags.REPLACE_DESTINATION,
+            null,
+        );
+        await new Promise<void>((resolve, reject) => {
+            new Shell.Screenshot().screenshot_area(
+                Math.max(0, Math.round(indicatorX + indicator.width - 520)),
+                0,
+                520,
+                32,
+                stream,
+                (source, result) => {
+                    try {
+                        required(source).screenshot_area_finish(result);
+                        stream.close(null);
+                        resolve();
+                    } catch (error) {
+                        reject(failure(error));
+                    }
+                },
+            );
+        });
+    } finally {
+        if (wasOpen) indicator.menu.open(false);
+    }
+}
+
 export {containsText, findActor, findActors};
 
 export interface SmokeContext {
@@ -225,5 +267,6 @@ export interface SmokeContext {
     openWithFastClock: () => void;
     press: (symbol: number, control?: boolean) => Promise<void>;
     usageColor: typeof import('../../../src/color.js').usageColor;
+    usageStatusColor: typeof import('../../../src/color.js').usageStatusColor;
     usageTextColor: typeof import('../../../src/color.js').usageTextColor;
 }

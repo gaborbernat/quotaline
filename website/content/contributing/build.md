@@ -29,7 +29,8 @@ On GNOME Shell 50, install `gnome-extensions` and `systemctl --user`, then run:
 mise exec -- just install
 ```
 
-The install stays in your home directory. See the [GNOME guide](/gnome/) for the service and extension paths.
+The install stays in your home directory. See the [GNOME install guide](/gnome/install/) for the service and extension
+paths.
 
 ## macOS build and install
 

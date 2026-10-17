@@ -173,6 +173,7 @@ export class TokenPanel {
     _providerStatusLabels: {actor: St.Label; id: string}[];
     _monitorId: number;
     _scrollSource: number;
+    _scrollbarHide: number;
     _quitPending: boolean;
     _historyRequest: number;
     _renderedTab: string | null;
@@ -293,6 +294,7 @@ export class TokenPanel {
         this._providerStatusLabels = [];
         this._monitorId = 0;
         this._scrollSource = 0;
+        this._scrollbarHide = 0;
         this._quitPending = false;
         this._historyRequest = 0;
         this._renderedTab = null;
@@ -331,6 +333,7 @@ export class TokenPanel {
         this._cancel = new Gio.Cancellable();
         this._tooltip = new Tooltip();
         this._indicator = new PanelMenu.Button(0.5, COPY.appName, false) as Indicator;
+        this._indicator.add_style_class_name('tmb-panel-button');
         const panel = box(false, 'panel-status-menu-box');
         const appIcon = new Gio.FileIcon({
             file: Gio.File.new_for_path(GLib.build_filenamev([this.path, 'icons', 'quotaline-symbolic.svg'])),
@@ -396,7 +399,7 @@ export class TokenPanel {
         this._root.add_action_full('tmb-shortcuts', Clutter.EventPhase.CAPTURE, shortcuts);
         const monitor = this._panelMonitor();
         this._monitorWidth = monitor.width;
-        this._root.width = Math.min(860, Math.max(280, this._monitorWidth - 32));
+        this._root.width = Math.min(880, Math.max(280, this._monitorWidth - 32));
         this._compact = this._root.width < 790;
         const header = box(false, 'tmb-header');
         this._headerInfo = box(false, 'tmb-header-info');
@@ -420,9 +423,10 @@ export class TokenPanel {
         this._headerBalance = box();
         this._headerBalance.width = 165;
         this._headerActivity = label('', 'tmb-header-activity');
-        this._headerActivity.x_expand = true;
+        this._headerBalance.add_child(new St.Widget({x_expand: true}));
         this._headerActivity.x_align = Clutter.ActorAlign.END;
         this._headerBalance.add_child(this._headerActivity);
+        rightGap.add_child(new St.Widget({x_expand: true}));
         rightGap.add_child(this._headerBalance);
         header.add_child(rightGap);
         this._root.add_child(header);
@@ -430,16 +434,31 @@ export class TokenPanel {
         this._scroll.style = `max-height: ${Math.max(180, monitor.height - 160)}px;`;
         this._page = box(true, 'tmb-page');
         this._scroll.set_child(this._page);
+        const scrollbars = this._scroll.get_children().filter(actor => actor instanceof St.ScrollBar);
+        for (const scrollbar of scrollbars) scrollbar.opacity = 0;
+        this._scroll.get_vadjustment().connect('notify::value', () => {
+            for (const scrollbar of scrollbars) scrollbar.opacity = 255;
+            if (this._scrollbarHide) GLib.Source.remove(this._scrollbarHide);
+            this._scrollbarHide = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1200, () => {
+                for (const scrollbar of scrollbars) scrollbar.opacity = 0;
+                this._scrollbarHide = 0;
+                return GLib.SOURCE_REMOVE;
+            });
+        });
         this._root.add_child(this._scroll);
         this._footer = box(false, 'tmb-footer');
         this._footerPrimary = box(false, 'tmb-footer-group');
         const refresh = button(
-            '↻  Refresh',
+            'Refresh',
             () => {
                 this._refresh();
             },
             'tmb-control tmb-footer-action',
         );
+        const refreshContent = box(false, 'tmb-footer-action-content');
+        refreshContent.add_child(new St.Icon({icon_name: 'view-refresh-symbolic', icon_size: 13}));
+        refreshContent.add_child(label('Refresh'));
+        refresh.set_child(refreshContent);
         this._tooltip.attach(
             refresh,
             'Refresh',
@@ -469,6 +488,19 @@ export class TokenPanel {
             },
             'tmb-control tmb-footer-action',
         );
+        const reportContent = box(false, 'tmb-footer-action-content');
+        reportContent.add_child(
+            new St.Icon({
+                gicon: new Gio.FileIcon({
+                    file: Gio.File.new_for_path(
+                        GLib.build_filenamev([this.path, 'icons', 'report-issue-symbolic.svg']),
+                    ),
+                }),
+                icon_size: 13,
+            }),
+        );
+        reportContent.add_child(label('Report issue'));
+        report.set_child(reportContent);
         this._tooltip.attach(report, 'Report issue', 'Opens a draft issue with diagnostics when available.');
         this._footerPrimary.add_child(report);
         this._footerPrimarySpacer = new St.Widget({x_expand: true});
@@ -503,12 +535,16 @@ export class TokenPanel {
         this._footerSpacer = new St.Widget({x_expand: true});
         this._footer.add_child(this._footerSpacer);
         this._footerQuit = button(
-            '⏻  Quit',
+            'Quit',
             () => {
                 this._requestQuit();
             },
             'tmb-control tmb-footer-action',
         );
+        const quitContent = box(false, 'tmb-footer-action-content');
+        quitContent.add_child(new St.Icon({icon_name: 'system-shutdown-symbolic', icon_size: 13}));
+        quitContent.add_child(label('Quit'));
+        this._footerQuit.set_child(quitContent);
         this._footerQuit.accessible_name = 'Quit';
         this._footerQuit.x_align = Clutter.ActorAlign.END;
         this._tooltip.attach(
@@ -573,8 +609,13 @@ export class TokenPanel {
             this._light =
                 this._themeSettings.color_scheme === St.SystemColorScheme.PREFER_LIGHT &&
                 !this._themeSettings.high_contrast;
-            if (this._light) this._root.add_style_class_name('tmb-light');
-            else this._root.remove_style_class_name('tmb-light');
+            if (this._light) {
+                this._root.add_style_class_name('tmb-light');
+                this._indicator.add_style_class_name('tmb-light');
+            } else {
+                this._root.remove_style_class_name('tmb-light');
+                this._indicator.remove_style_class_name('tmb-light');
+            }
             this._panelSignature = null;
             this._render();
         };
@@ -652,6 +693,10 @@ export class TokenPanel {
         if (this._scrollSource) {
             global.stage.disconnect(this._scrollSource);
             this._scrollSource = 0;
+        }
+        if (this._scrollbarHide) {
+            GLib.Source.remove(this._scrollbarHide);
+            this._scrollbarHide = 0;
         }
         if (this._proxy) {
             if (this._signalId) this._proxy.disconnect(this._signalId);

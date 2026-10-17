@@ -7,39 +7,85 @@ import {fileURLToPath} from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-test('site builds with versioned links and platform reference pages', context => {
+test('site builds with versioned links and platform guides', context => {
     const {destination, result} = build(context);
     assert.equal(result.status, 0, result.stderr);
     const start = fs.readFileSync(path.join(destination, 'start/index.html'), 'utf8');
     assert.match(start, /\/en\/preview\/start\/connect\//);
+    assert.match(start, /gnome-menubar/);
+    assert.match(start, /gnome-usage/);
+    assert.match(start, /menubar-light/);
+    assert.match(start, /popover-usage-light/);
     const menuBar = fs.readFileSync(path.join(destination, 'reference/menu-bar/index.html'), 'utf8');
     assert.match(menuBar, /\/en\/preview\/reference\/settings\/menu-bar\/#custom-templates/);
     const home = fs.readFileSync(path.join(destination, 'index.html'), 'utf8');
-    assert.match(home, />Get started<\/a>/);
+    assert.match(home, /Get started<\/a>/);
     assert.doesNotMatch(home, /Build from source<\/a>/);
+    assert.match(home, /href=\/en\/preview\/macos\//);
+    assert.match(home, /href=\/en\/preview\/gnome\//);
+    assert.match(home, /id=hero-tab-all/);
+    assert.match(home, /id=hero-tab-macos/);
+    assert.match(home, /id=hero-tab-gnome/);
+    const navigation = home.match(/<nav class=nav aria-label=Main>(.*?)<\/nav>/s)?.[1];
+    assert.ok(navigation);
+    assert.equal((navigation.match(/<a /g) ?? []).length, (navigation.match(/<svg /g) ?? []).length);
     for (const provider of ['claude', 'codex', 'gemini', 'antigravity', 'cursor', 'copilot']) {
         assert.match(home, new RegExp(`/en/preview/reference/providers/${provider}/`));
         assert.ok(fs.statSync(path.join(destination, `reference/providers/${provider}/index.md`)).size > 0);
     }
-    for (const file of ['llms.txt', 'reference/providers/index.md', 'gnome/index.html']) {
+    for (const file of ['llms.txt', 'reference/providers/index.md', 'gnome/index.html', 'macos/index.html']) {
         assert.ok(fs.statSync(path.join(destination, file)).size > 0);
+    }
+    for (const platform of ['macos', 'gnome']) {
+        const guide = fs.readFileSync(path.join(destination, platform, 'index.html'), 'utf8');
+        for (const tab of ['usage', 'history', 'settings']) {
+            assert.match(guide, new RegExp(`id=gallery-tab-${platform}-${tab}`));
+            assert.match(guide, new RegExp(`id=gallery-panel-${platform}-${tab}`));
+            const image = guide.match(new RegExp(`id=gallery-panel-${platform}-${tab}[^<]*><img[^>]*width=880 height=(\\d+)`));
+            assert.ok(image);
+            assert.ok(Number(image[1]) > 760, `${platform} ${tab} should show the full tab`);
+        }
     }
 });
 
-test('site switches screenshots and steps with the stored desktop choice', context => {
+test('a frontend entry adds navigation and install cards', context => {
+    const {destination, result} = build(context, undefined, {}, source => {
+        fs.appendFileSync(path.join(source, 'data/platforms.yaml'), `\n- id: tui\n  name: TUI\n  navIcon: M4 4h16v16H4z\n  label: Terminal\n  requires: A terminal\n  title: Terminal app\n  summary: Quota readings in a terminal.\n  startTitle: Install the TUI\n  startSummary: Install the terminal app.\n  action: Install the TUI\n  install: tui/install/\n`);
+        fs.mkdirSync(path.join(source, 'content/tui'));
+        fs.writeFileSync(path.join(source, 'content/tui/_index.md'), '---\ntitle: TUI\nlayout: platform\n---\n');
+        fs.writeFileSync(path.join(source, 'content/tui/install.md'), '---\ntitle: Install\n---\n');
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const home = fs.readFileSync(path.join(destination, 'index.html'), 'utf8');
+    const start = fs.readFileSync(path.join(destination, 'start/index.html'), 'utf8');
+    assert.match(home, /href=\/en\/preview\/tui\//);
+    assert.match(start, /Install the TUI/);
+    assert.ok(fs.statSync(path.join(destination, 'tui/index.html')).size > 0);
+});
+
+test('site shows both platform previews without hidden desktop state', context => {
     const {destination, result} = build(context);
     assert.equal(result.status, 0, result.stderr);
     const usage = fs.readFileSync(path.join(destination, 'reference/usage/index.html'), 'utf8');
-    assert.match(usage, /class="?shot only-light only-macos"?/);
-    assert.match(usage, /class="?shot only-gnome"?/);
-    assert.match(usage, /<figcaption class="?only-gnome"?>/);
+    assert.match(usage, /<strong>macOS<\/strong>/);
+    assert.match(usage, /<strong>GNOME<\/strong>/);
     const start = fs.readFileSync(path.join(destination, 'start/index.html'), 'utf8');
-    assert.match(start, /<div class="?only-macos"?>[\s\S]*brew install --cask/);
-    assert.match(start, /<div class="?only-gnome"?>[\s\S]*just install/);
-    assert.match(start, /localStorage\.getItem\("tmb-platform"\)/);
-    assert.match(start, /data-platform="?gnome"?/);
-    const gnome = fs.readFileSync(path.join(destination, 'gnome/index.html'), 'utf8');
-    assert.doesNotMatch(gnome, /only-macos[^-]/);
+    assert.match(start, /Install the app/);
+    assert.match(start, /Install the extension/);
+    assert.doesNotMatch(start, /tmb-platform|data-platform/);
+    const macosInstall = fs.readFileSync(path.join(destination, 'macos/install/index.html'), 'utf8');
+    assert.match(macosInstall, /brew install --cask/);
+    const gnomeInstall = fs.readFileSync(path.join(destination, 'gnome/install/index.html'), 'utf8');
+    assert.match(gnomeInstall, /just install/);
+});
+
+test('site redirects moved platform-only pages', context => {
+    const {destination, result} = build(context);
+    assert.equal(result.status, 0, result.stderr);
+    const widgets = fs.readFileSync(path.join(destination, 'reference/widgets/index.html'), 'utf8');
+    assert.match(widgets, /\/en\/preview\/macos\/widgets\//);
+    const updates = fs.readFileSync(path.join(destination, 'troubleshooting/application/index.html'), 'utf8');
+    assert.match(updates, /\/en\/preview\/macos\/install-troubleshooting\//);
 });
 
 test('site reuses downloaded diagrams without network access', context => {
@@ -51,12 +97,6 @@ test('site reuses downloaded diagrams without network access', context => {
     assert.equal(result.status, 0, result.stderr);
     const providers = fs.readFileSync(path.join(destination, 'contributing/providers/index.html'), 'utf8');
     assert.match(providers, /\/js\/mermaid\.[a-f0-9]+\.js/);
-});
-
-test('site rejects an unknown desktop', context => {
-    const {result} = build(context, '{{< platform windows >}}Text{{< /platform >}}');
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /platform shortcode takes macos or gnome/);
 });
 
 test('site rejects missing GNOME screenshots', context => {
@@ -77,16 +117,17 @@ test('site rejects missing screenshots', context => {
     assert.match(result.stderr, /Missing screenshot images\/missing-doc-image/);
 });
 
-function build(context, addition, environment = {}) {
+function build(context, addition, environment = {}, changeSource = () => {}) {
     const temporary = path.join(root, 'target/tmp');
     fs.mkdirSync(temporary, {recursive: true});
     const scratch = fs.mkdtempSync(path.join(temporary, 'site-test-'));
     context.after(() => fs.rmSync(scratch, {recursive: true, force: true}));
     const source = path.join(scratch, 'site');
     fs.mkdirSync(source);
-    for (const item of ['hugo.toml', 'content', 'layouts', 'assets', 'static', 'resources']) {
+    for (const item of ['hugo.toml', 'content', 'layouts', 'assets', 'data', 'static', 'resources']) {
         fs.cpSync(path.join(root, 'website', item), path.join(source, item), {recursive: true});
     }
+    changeSource(source);
     if (addition) {
         fs.writeFileSync(path.join(source, 'content/link-check.md'), `---\ntitle: Link check\n---\n${addition}\n`);
     }

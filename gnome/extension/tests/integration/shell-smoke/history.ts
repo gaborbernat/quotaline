@@ -78,8 +78,63 @@ export async function run({
             'History did not restore an enabled provider',
         );
     }
-    await capture('history');
     if (GLib.getenv('TMB_EXPECT_DEMO') === '1') {
+        const {history_days: originalDays, history_rollup: originalRollup} = serviceSettings();
+        const followedNow = instance(
+            required(findActor(root, actor => buttonLabel(actor) === 'Now')),
+            St.Widget,
+        ).has_style_class_name('tmb-tab-selected');
+        required(findActor(root, actor => buttonLabel(actor) === '30d')).emit('clicked', 1);
+        await waitOrFail(
+            () =>
+                findActor(
+                    root,
+                    actor =>
+                        buttonLabel(actor) === '30d' &&
+                        instance(actor, St.Widget).has_style_class_name('tmb-tab-selected'),
+                ) && findActor(root, actor => actor.has_style_class_name?.('tmb-chart')),
+            'Thirty-day History capture did not load',
+        );
+        required(findActor(root, actor => buttonLabel(actor) === 'Day')).emit('clicked', 1);
+        await waitOrFail(
+            () =>
+                findActor(
+                    root,
+                    actor =>
+                        buttonLabel(actor) === 'Day' &&
+                        instance(actor, St.Widget).has_style_class_name('tmb-tab-selected'),
+                ) && findActor(root, actor => actor.has_style_class_name?.('tmb-chart')),
+            'Daily History capture did not load',
+        );
+        await capture('history');
+        const originalPeriodLabel = followedNow ? 'Now' : originalDays === 1 ? 'Today' : `${originalDays}d`;
+        required(findActor(root, actor => buttonLabel(actor) === originalPeriodLabel)).emit('clicked', 1);
+        await waitOrFail(
+            () =>
+                findActor(
+                    root,
+                    actor =>
+                        buttonLabel(actor) === originalPeriodLabel &&
+                        instance(actor, St.Widget).has_style_class_name('tmb-tab-selected'),
+                ),
+            'History period was not restored',
+        );
+        if (followedNow) await setSetting('history_days', originalDays);
+        const originalRollupLabel = originalRollup.charAt(0).toUpperCase() + originalRollup.slice(1);
+        required(findActor(root, actor => buttonLabel(actor) === originalRollupLabel)).emit('clicked', 1);
+        await waitOrFail(() => serviceSettings().history_rollup === originalRollup, 'History rollup was not restored');
+    } else {
+        await capture('history');
+    }
+    if (root.width > 880) throw new Error(`History menu exceeds 880px: ${root.width}`);
+    if (GLib.getenv('TMB_EXPECT_DEMO') === '1') {
+        const nextReading = required(
+            findActor(contentOf(root.get_children()[1]), actor => buttonLabel(actor) === 'Next reading'),
+        );
+        const [, nextY] = nextReading.get_transformed_position();
+        const [, scrollY] = required(root.get_children()[1]).get_transformed_position();
+        if (nextY + nextReading.height > scrollY + required(root.get_children()[1]).height)
+            throw new Error('History reading controls are clipped by the footer');
         indicator.menu.close(false);
         openWithFastClock();
         await afterPaint(() => {});

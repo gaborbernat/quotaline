@@ -43,9 +43,9 @@ into `target/extension/`, which packaging, installs, demos, and every Shell test
 against that build. Swift code is in `macos/src/` and its tests and fixtures are in `macos/tests/`. Run `just lines` at
 the repository root to compare source and test line counts by component. It reports generated Swift bindings separately.
 
-Swift retains macOS-specific clients and Apple API access. Move a decision to Rust when both platforms need it, while
-keeping visible text, layout, colors, and widgets in the native interfaces. The GNOME extension receives facts from the
-Rust service through D-Bus and does not read provider credentials.
+Swift retains macOS-specific clients and Apple API access. Move a decision to Rust when multiple frontends need it,
+while keeping visible text, layout, colors, and widgets in the native interfaces. The GNOME extension receives facts
+from the Rust service through D-Bus and does not read provider credentials.
 
 Provider response rules belong in that provider's crate, such as `crates/providers/claude`. Platform adapters implement
 the I/O that obtains each response. A new provider needs a shared definition and projector, adapter code for each

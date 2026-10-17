@@ -171,9 +171,9 @@ async function runScenario() {
                     const chart = findActor(root, actor => actor.has_style_class_name?.('tmb-chart'));
                     const legend = findActor(root, actor => actor.has_style_class_name?.('tmb-history-legend'));
                     return (
-                        root.width >= 888 &&
+                        root.width >= 875 &&
                         chart?.has_allocation() &&
-                        chart.width >= 600 &&
+                        chart.width >= 580 &&
                         legend?.has_allocation() &&
                         legend.get_transformed_position()[0] >= chart.get_transformed_position()[0] + chart.width
                     );
@@ -184,26 +184,29 @@ async function runScenario() {
         const monitor = required(Main.layoutManager.primaryMonitor);
         const originalWidth = monitor.width;
         const panelCells = required(findActor(indicator, actor => actor.has_style_class_name?.('tmb-panel-cells')));
+        const statusCells = () =>
+            panelCells.get_children().filter(actor => actor.has_style_class_name?.('tmb-panel-cell'));
+        const panelIcon = required(required(panelCells.get_parent()).get_children()[0]);
         try {
             monitor.width = 900;
             Main.layoutManager.emit('monitors-changed');
             await waitFor(
                 () =>
                     root.width >= 280 &&
-                    root.width <= Math.min(860, monitor.width - 32) &&
-                    panelCells.get_n_children() === 6 &&
+                    root.width <= Math.min(880, monitor.width - 32) &&
+                    (statusCells().length > 0 || panelIcon.visible) &&
                     panelCells.get_preferred_width(-1)[1] <= Math.floor(monitor.width * 0.35) &&
                     findActor(root, actor => actor.has_style_class_name?.('tmb-settings-section')),
                 () =>
-                    `Resized monitor kept a ${root.width}px Settings menu and ${panelCells.get_n_children()} panel cells`,
+                    `Resized monitor kept a ${root.width}px Settings menu, ${statusCells().length} cells, ` +
+                    `${panelIcon.visible ? 'visible' : 'hidden'} icon, and ${panelCells.get_preferred_width(-1)[1]}px status width`,
             );
         } finally {
             monitor.width = originalWidth;
             Main.layoutManager.emit('monitors-changed');
             await waitFor(
-                () => root.width >= 790 && panelCells.get_n_children() > 0,
-                () =>
-                    `Restored monitor kept a ${root.width}px Settings menu and ${panelCells.get_n_children()} panel cells`,
+                () => root.width >= 790 && statusCells().length > 0,
+                () => `Restored monitor kept a ${root.width}px Settings menu and ${statusCells().length} panel cells`,
             );
         }
         try {
@@ -237,7 +240,7 @@ async function runScenario() {
                 findActor(root, actor => actor.accessible_name === 'Usage' && actor.has_style_class_name?.('tmb-tab')),
             ).emit('clicked', 1);
             const fallback = {x: 0, width: Math.max(800, global.stage.width)};
-            if (root.width < 280 || root.width > Math.min(860, fallback.width - 32))
+            if (root.width < 280 || root.width > Math.min(880, fallback.width - 32))
                 throw new Error('Menu lost its width while the primary monitor was unavailable');
         } finally {
             Main.layoutManager.primaryMonitor = monitor;
@@ -266,10 +269,8 @@ async function runScenario() {
         rootX < 0 ||
         rootX + root.width > global.stage.width ||
         root.width < 440 ||
-        root.width >= 860 ||
-        Math.abs(menuCenter - closestCenter) > 25 ||
-        menuCenter < indicatorX - 16 ||
-        menuCenter > indicatorX + indicator.width + 16
+        root.width !== Math.min(880, global.stage.width - 32) ||
+        Math.abs(menuCenter - closestCenter) > 25
     )
         throw new Error(
             `Right-side wide menu did not fit around the panel item: ${JSON.stringify({

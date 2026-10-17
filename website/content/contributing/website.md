@@ -18,3 +18,7 @@ and `/llms.txt` indexes them for crawlers in the [llms.txt](https://llmstxt.org)
 
 Diagrams are [Mermaid](https://mermaid.js.org) fenced blocks. The renderer loads only on pages that hold one, and takes
 its palette from the site tokens, so a diagram follows the light and dark themes.
+
+To add a frontend, create a section under `website/content/` and add its name, icon, installation link and screenshots
+to `website/data/platforms.yaml`. The header, landing page and Get started cards use that list. Put shared behavior in
+the reference pages and keep installation and interface controls in the frontend section.

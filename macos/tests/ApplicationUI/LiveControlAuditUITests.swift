@@ -392,7 +392,12 @@ final class LiveControlAuditUITests: XCTestCase {
         applicationWindows(processIdentifier: processIdentifier)[tooltip.identifier] == nil
       }, "Scrolling did not dismiss the tooltip immediately")
     movePointerOffPanel(in: verification.application)
-    guard let scrolledControl = try tooltipCandidates(in: surface).first?.1 else { return }
+    XCTAssertTrue(
+      waitUntil(timeout: 0.25) {
+        applicationWindows(processIdentifier: processIdentifier).allSatisfy { baseline[$0.key] != nil }
+      }, "Scrolling left a tooltip on screen")
+    let scrolledControl = verification.application.buttons["footer-refresh"]
+    XCTAssertTrue(waitUntil(timeout: controlTimeout) { scrolledControl.isHittable })
     let scrolledBaseline = applicationWindows(processIdentifier: processIdentifier)
     scrolledControl.hover()
     let scrolledTooltip = try waitForTooltip(

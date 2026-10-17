@@ -1,13 +1,13 @@
 ---
-title: Menu bar
+title: Status display
 description: Read selected limits, weekly restrictions and reset countdowns.
 weight: 3
 ---
 
 {{< shot name="menubar" scale="3" alt="Demo menu bar cells with short labels and quota percentages" caption="macOS menu bar preview with generated Claude and Codex data." gnome="gnome-menubar" gnome-alt="GNOME top bar cells with short labels and quota percentages" gnome-caption="GNOME top bar cells with generated data." >}}
 
-The menu bar shows selected models or rate-limit periods with unique, editable short labels. Colours follow the used
-share, including when **Show usage as** displays what is left.
+The macOS menu bar item and GNOME top bar show selected models or rate-limit periods with unique, editable short labels.
+Colours follow the used share, including when **Show usage as** displays what is left.
 
 | Format            | Presentation                                                                          |
 | ----------------- | ------------------------------------------------------------------------------------- |

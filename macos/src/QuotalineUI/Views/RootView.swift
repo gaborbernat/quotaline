@@ -51,11 +51,45 @@ public struct RootView: View {
   }
 
   private var tabBar: some View {
-    HStack(spacing: 0) {
-      Spacer(minLength: 0)
+    ZStack {
       TabPicker(selection: Binding(get: { environment.settings.lastTab }, set: { select($0) }))
         .fixedSize()
-      Spacer(minLength: 0)
+      HStack(spacing: 0) {
+        HStack(spacing: 7) {
+          AppIconView(size: 20, tone: environment.usagePresentation.iconTone)
+            .accessibilityHidden(true)
+          VStack(alignment: .leading, spacing: 0) {
+            Text(environment.appInfo.name).font(.system(size: 11, weight: .semibold))
+            Text(
+              "Updated \(UsageDeadline.age(environment.usagePresentation.lastRefresh).text(at: environment.usageDeadlineNow))"
+            )
+            .font(.system(size: 9))
+            .semanticForeground(.secondary)
+            .richHelp(
+              TooltipContent(
+                title: "Last refresh",
+                body:
+                  "Shows when the latest provider refresh finished. Individual cards identify stale or cached values."
+              ))
+          }
+        }
+        .accessibilityElement(children: .combine)
+        Spacer(minLength: 0)
+        if environment.usagePresentation.isRefreshing {
+          ProgressView().progressViewStyle(RingProgressViewStyle()).accessibilityLabel("Refreshing")
+        }
+        if environment.isDemo {
+          Text(SharedCopy.demoData)
+            .font(.system(size: 10, weight: .medium))
+            .semanticForeground(.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 7))
+            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Color.primary.opacity(0.12)))
+            .accessibilityIdentifier("usage-demo-badge")
+        }
+      }
+      .padding(.horizontal, 12)
     }
     .frame(height: PopoverGeometry.tabBarHeight)
     .panelSurface(.content)

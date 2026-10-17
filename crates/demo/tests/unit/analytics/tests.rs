@@ -21,6 +21,14 @@ fn demo_analytics_covers_claude_and_codex() {
 }
 
 #[test]
+fn demo_analytics_days_keep_matching_calendar_values() {
+    let now = Utc.with_ymd_and_hms(2026, 10, 12, 14, 0, 0).unwrap();
+    let short = demo_analytics_at("claude", now, 3, false).unwrap();
+    let long = demo_analytics_at("claude", now, 60, false).unwrap();
+    assert_eq!(short.as_slice(), &long[long.len() - short.len()..]);
+}
+
+#[test]
 fn long_text_fixture_changes_only_series_names() {
     let now = Utc.with_ymd_and_hms(2026, 10, 12, 14, 0, 0).unwrap();
     let standard = demo_analytics_at("claude", now, 1, false).unwrap();

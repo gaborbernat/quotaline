@@ -84,7 +84,7 @@ export async function run() {
             const menuX = root.get_transformed_position()[0];
             return (
                 root.width >= 280 &&
-                root.width <= Math.min(860, global.stage.width - 32) &&
+                root.width <= Math.min(880, global.stage.width - 32) &&
                 menuX >= 0 &&
                 menuX + root.width <= global.stage.width &&
                 indicatorCenter >= menuX - 20 &&

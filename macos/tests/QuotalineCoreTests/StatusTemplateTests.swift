@@ -77,6 +77,14 @@ private let fable = QuotaWindow(
   #expect(StatusItemBuilder.defaultSelection(odd).map(\.windowID) == ["a", "b"])
 }
 
+@Test func defaultSelectionKeepsAntigravitySourcePriority() {
+  let snapshot = DemoData.snapshot(.antigravity, now: fixedNow)
+  #expect(Array(snapshot.windows.map(\.id).prefix(2)) == ["3p:session", "gemini:session"])
+  #expect(
+    StatusItemBuilder.defaultSelection([.antigravity: snapshot]).map(\.storageKey)
+      == ["antigravity:gemini:session", "antigravity:gemini:weekly"])
+}
+
 private func input(
   format: StatusFormat = .stacked, selected: [WindowKey]? = nil, hideZero: Bool = true, order: WindowOrder = .provider,
   availability: [ProviderID: QuotaAvailability] = [.claude: .current, .codex: .current],

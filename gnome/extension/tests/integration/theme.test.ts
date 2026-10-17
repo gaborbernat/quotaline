@@ -35,13 +35,17 @@ function widthSettled(indicator: Indicator, cap: number) {
     const [menuX] = root.get_transformed_position();
     const [sourceX] = indicator.get_transformed_position();
     const menuCenter = menuX + root.width / 2;
+    const closestCenter = Math.clamp(
+        sourceX + indicator.width / 2,
+        monitor.x + root.width / 2,
+        monitor.x + monitor.width - root.width / 2,
+    );
     return (
         root.width >= Math.min(440, monitor.width - 32) - 3 &&
         root.width <= Math.min(cap, monitor.width - 32) + 3 &&
-        menuX >= monitor.x + 8 &&
-        menuX + root.width <= monitor.x + monitor.width - 8 &&
-        menuCenter >= sourceX - 8 &&
-        menuCenter <= sourceX + indicator.width + 8
+        menuX >= monitor.x &&
+        menuX + root.width <= monitor.x + monitor.width &&
+        Math.abs(menuCenter - closestCenter) <= 25
     );
 }
 
@@ -132,7 +136,7 @@ export async function run() {
             ),
         ).emit('clicked', 1);
         await waitFor(() => findActor(indicator.menu.box, actor => actor.has_style_class_name?.('tmb-card')));
-        await waitFor(() => widthSettled(indicator, 860), 'Usage width');
+        await waitFor(() => widthSettled(indicator, 880), 'Usage width');
         await waitFor(() =>
             optionalInstance(
                 findActor(indicator, actor => actor.has_style_class_name?.('tmb-panel-value')),
@@ -147,8 +151,11 @@ export async function run() {
                 /../g,
             ),
         ).map(channel => parseInt(channel, 16));
-        const background = mode === 'light' ? [189, 189, 191] : [71, 71, 71];
-        const [lighter, darker] = [luminance(background), luminance(color)].sort((left, right) => right - left);
+        const background = Main.panel.get_theme_node().get_background_color();
+        const [lighter, darker] = [
+            luminance([background.red, background.green, background.blue]),
+            luminance(color),
+        ].sort((left, right) => right - left);
         const contrast = (required(lighter) + 0.05) / (required(darker) + 0.05);
         if (contrast < 4.5) throw new Error(`${mode} panel value contrast is ${contrast.toFixed(2)}:1`);
         if (mode === 'light') {
@@ -166,7 +173,7 @@ export async function run() {
         await waitFor(() =>
             findActor(indicator.menu.box, actor => actor.has_style_class_name?.('tmb-setting-segments')),
         );
-        await waitFor(() => widthSettled(indicator, 860), 'Settings width');
+        await waitFor(() => widthSettled(indicator, 880), 'Settings width');
         if (mode === 'light') {
             const selected = required(
                 findActor(indicator.menu.box, actor => actor.has_style_class_name?.('tmb-setting-segment-selected')),
@@ -219,8 +226,8 @@ export async function run() {
                 findActor(indicator.menu.box, actor => actor.has_style_class_name?.('tmb-legend-toggle')),
         );
         await waitFor(
-            () => widthSettled(indicator, 890),
-            () => `History width ${widthDetails(indicator, 890)}`,
+            () => widthSettled(indicator, 880),
+            () => `History width ${widthDetails(indicator, 880)}`,
         );
         await waitFor(() => {
             const chart = required(findActor(indicator.menu.box, actor => actor.has_style_class_name?.('tmb-chart')));
@@ -231,8 +238,8 @@ export async function run() {
             return (
                 chart.has_allocation() &&
                 legend.has_allocation() &&
-                (root.width >= 888
-                    ? chart.width >= 600 &&
+                (root.width >= 875
+                    ? chart.width >= 580 &&
                       legend.get_transformed_position()[0] >= chart.get_transformed_position()[0] + chart.width
                     : chart.width >= root.width - 50 &&
                       legend.get_transformed_position()[1] >= chart.get_transformed_position()[1] + chart.height)

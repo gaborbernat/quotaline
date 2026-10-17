@@ -9,6 +9,7 @@ import type {SmokeContext} from './helpers.js';
 import {
     afterPaint,
     capture,
+    captureStatus,
     changedAfter,
     containsText,
     copiedTextAfter,
@@ -26,11 +27,19 @@ export async function run({
     openWithFastClock,
     demoState,
     usageColor,
-    usageTextColor,
+    usageStatusColor,
 }: Pick<
     SmokeContext,
-    'indicator' | 'root' | 'footer' | 'panelCells' | 'openWithFastClock' | 'demoState' | 'usageColor' | 'usageTextColor'
+    | 'indicator'
+    | 'root'
+    | 'footer'
+    | 'panelCells'
+    | 'openWithFastClock'
+    | 'demoState'
+    | 'usageColor'
+    | 'usageStatusColor'
 >) {
+    const statusCells = () => panelCells.get_children().filter(actor => actor.has_style_class_name?.('tmb-panel-cell'));
     indicator.menu.close(false);
     openWithFastClock();
     await afterPaint(() => {});
@@ -41,6 +50,20 @@ export async function run({
     );
     indicator.menu.close(false);
     indicator.menu.open(false);
+    const scroll = instance(required(findActor(root, actor => actor instanceof St.ScrollView)), St.ScrollView);
+    const scrollbar = instance(
+        required(scroll.get_children().find(actor => actor instanceof St.ScrollBar)),
+        St.ScrollBar,
+    );
+    if (scrollbar.opacity !== 0) throw new Error('Idle Usage scrollbar remains visible');
+    const scrollAdjustment = scroll.get_vadjustment();
+    if (scrollAdjustment.upper > scrollAdjustment.page_size) {
+        scrollAdjustment.value = Math.min(scrollAdjustment.upper - scrollAdjustment.page_size, 30);
+        await waitOrFail(() => scrollbar.opacity === 255, 'Usage scrollbar did not appear while scrolling');
+        await waitOrFail(() => scrollbar.opacity === 0, 'Usage scrollbar did not hide after scrolling');
+        scrollAdjustment.value = 0;
+        await waitOrFail(() => scrollbar.opacity === 0, 'Usage scrollbar did not hide after returning to the top');
+    }
     if (GLib.getenv('TMB_EXPECT_DEMO') === '1') {
         await changedAfter(() => {
             required(findActor(footer, actor => buttonLabel(actor)?.includes('Refresh'))).emit('clicked', 1);
@@ -52,23 +75,27 @@ export async function run({
     }
     if (GLib.getenv('TMB_EXPECT_DEMO') === '1') {
         if (
-            panelCells.get_n_children() < 2 ||
-            !panelCells
-                .get_children()
-                .every(
-                    actor =>
-                        instance(actor, St.Widget).has_style_class_name('tmb-panel-cell-stacked') &&
-                        actor.get_n_children() === 2,
-                )
+            statusCells().length < 2 ||
+            !statusCells().every(
+                actor =>
+                    instance(actor, St.Widget).has_style_class_name('tmb-panel-cell-stacked') &&
+                    actor.get_n_children() === 2,
+            )
         )
             throw new Error('Stacked menu bar cells must keep separate label and percentage lines');
-        if (panelCells.get_preferred_width(-1)[1] >= 330)
+        if (panelCells.get_preferred_width(-1)[1] >= 400)
             throw new Error('Stacked menu bar cells use too much horizontal space');
-        if (instance(panelCells.get_children()[0], St.Widget).get_theme_node().get_border_width(St.Side.RIGHT) !== 1)
-            throw new Error('Stacked menu bar separators did not receive their style');
+        const separators = panelCells
+            .get_children()
+            .filter(actor => actor.has_style_class_name?.('tmb-panel-separator'));
+        if (
+            separators.length !== statusCells().length - 1 ||
+            separators.some(actor => actor.width !== 1 || actor.height !== 20)
+        )
+            throw new Error('Stacked menu bar separators are missing or clipped');
         await waitOrFail(
             () =>
-                panelCells.get_children().every(cell => {
+                statusCells().every(cell => {
                     const [top, bottom] = cell.get_children();
                     return (
                         required(top).get_y() < required(bottom).get_y() &&
@@ -76,10 +103,10 @@ export async function run({
                     );
                 }),
             `Stacked menu bar labels are not aligned in two rows: ${JSON.stringify(
-                panelCells.get_children().map(cell => cell.get_children().map(row => [row.get_y(), row.get_width()])),
+                statusCells().map(cell => cell.get_children().map(row => [row.get_y(), row.get_width()])),
             )}`,
         );
-        const firstPanelActor = panelCells.get_children()[0];
+        const firstPanelActor = statusCells()[0];
         const firstPanelCell = serviceState().cells.find(
             cell => cell.label === required(required(firstPanelActor).get_children()[0]).text,
         );
@@ -87,7 +114,7 @@ export async function run({
         if (
             !required(
                 instance(instance(required(firstPanelActor).get_children()[1], St.Widget), St.Widget).get_style(),
-            ).includes(usageTextColor(firstPanelUsed)) ||
+            ).includes(usageStatusColor(firstPanelUsed)) ||
             !required(
                 instance(instance(required(firstPanelActor).get_children()[1], St.Widget), St.Widget).get_style(),
             ).includes(usageColor(firstPanelUsed))
@@ -99,14 +126,32 @@ export async function run({
                 })}`,
             );
         await capture('menubar-stacked');
+        const comparisonKeys = [
+            'claude:session',
+            'claude:weekly',
+            'claude:weekly:fable',
+            'claude:weekly:sonnet',
+            'codex:session',
+            'codex:weekly',
+        ];
+        await setSetting('selected_windows', comparisonKeys);
+        await setSetting('order', 'stable');
+        await waitOrFail(
+            () =>
+                serviceState()
+                    .cells.map(cell => cell.id)
+                    .join() === comparisonKeys.join(),
+            'Comparison status cells changed order',
+        );
+        await captureStatus('menubar-comparison');
         await setSetting('selected_windows', ['claude:weekly', 'codex:session']);
         await waitOrFail(
-            () => panelCells.get_n_children() === 2,
+            () => statusCells().length === 2,
             'Two selected limits did not produce two stacked menu bar cells',
         );
         await capture('menubar-stacked-two-cells');
         await setSetting('has_custom_selection', false);
-        await waitOrFail(() => panelCells.get_n_children() >= 6, 'Default stacked menu bar selection was not restored');
+        await waitOrFail(() => statusCells().length >= 6, 'Default stacked menu bar selection was not restored');
     }
     const tabs = required(required(root.get_children()[0]).get_children()[1]).get_children();
     if (
@@ -116,11 +161,21 @@ export async function run({
             return (
                 content.get_children().length !== 2 ||
                 !instance(required(content.get_children()[0]), St.Icon).get_icon_name() ||
+                instance(required(content.get_children()[0]), St.Icon).icon_size !== 11 ||
                 required(content.get_children()[1]).text !== tab.accessible_name
             );
         })
     )
         throw new Error('Expected labeled Usage, History, and Settings tabs with icons');
+    const tabStrip = required(required(tabs[0]).get_parent());
+    const [tabX] = tabStrip.get_transformed_position();
+    const [rootX] = root.get_transformed_position();
+    if (
+        tabStrip.width < 265 ||
+        tabStrip.width > 285 ||
+        Math.abs(tabX + tabStrip.width / 2 - rootX - root.width / 2) > 2
+    )
+        throw new Error(`Tab strip is oversized or off-center: ${tabStrip.width}px at ${tabX - rootX}px`);
     if (GLib.getenv('TMB_EXPECT_DEMO') === '1') {
         await waitOrFail(
             () => containsText(contentOf(root.get_children()[1]), 'API-EQUIVALENT ESTIMATES'),

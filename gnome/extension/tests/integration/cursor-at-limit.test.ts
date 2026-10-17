@@ -26,8 +26,8 @@ export async function run() {
                 actor => actor.has_style_class_name?.('tmb-panel-value') && /\d+h\d\dm$/.test(actor.text ?? ''),
             );
         await waitOrFail(
-            () => optionalInstance(reset(), St.Widget)?.get_style()?.includes('#ffd8d1'),
-            `At-limit format did not show a muted reset: ${optionalInstance(reset(), St.Widget)?.get_style()}`,
+            () => optionalInstance(reset(), St.Widget)?.get_style()?.includes('#ff8873'),
+            `At-limit format did not show a warning-colored reset: ${optionalInstance(reset(), St.Widget)?.get_style()}`,
         );
         const directory = GLib.getenv('TMB_SCREENSHOT_DIR');
         if (directory) {

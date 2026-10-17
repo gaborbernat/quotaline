@@ -9,6 +9,7 @@ import type {SmokeContext} from './helpers.js';
 import {
     afterPaint,
     capture,
+    captureStatus,
     changedAfter,
     containsText,
     copiedTextAfter,
@@ -125,6 +126,24 @@ export async function run({
                 })}`,
             );
         await capture('menubar-stacked');
+        const comparisonKeys = [
+            'claude:session',
+            'claude:weekly',
+            'claude:weekly:fable',
+            'claude:weekly:sonnet',
+            'codex:session',
+            'codex:weekly',
+        ];
+        await setSetting('selected_windows', comparisonKeys);
+        await setSetting('order', 'stable');
+        await waitOrFail(
+            () =>
+                serviceState()
+                    .cells.map(cell => cell.id)
+                    .join() === comparisonKeys.join(),
+            'Comparison status cells changed order',
+        );
+        await captureStatus('menubar-comparison');
         await setSetting('selected_windows', ['claude:weekly', 'codex:session']);
         await waitOrFail(
             () => statusCells().length === 2,
@@ -142,11 +161,21 @@ export async function run({
             return (
                 content.get_children().length !== 2 ||
                 !instance(required(content.get_children()[0]), St.Icon).get_icon_name() ||
+                instance(required(content.get_children()[0]), St.Icon).icon_size !== 11 ||
                 required(content.get_children()[1]).text !== tab.accessible_name
             );
         })
     )
         throw new Error('Expected labeled Usage, History, and Settings tabs with icons');
+    const tabStrip = required(required(tabs[0]).get_parent());
+    const [tabX] = tabStrip.get_transformed_position();
+    const [rootX] = root.get_transformed_position();
+    if (
+        tabStrip.width < 265 ||
+        tabStrip.width > 285 ||
+        Math.abs(tabX + tabStrip.width / 2 - rootX - root.width / 2) > 2
+    )
+        throw new Error(`Tab strip is oversized or off-center: ${tabStrip.width}px at ${tabX - rootX}px`);
     if (GLib.getenv('TMB_EXPECT_DEMO') === '1') {
         await waitOrFail(
             () => containsText(contentOf(root.get_children()[1]), 'API-EQUIVALENT ESTIMATES'),

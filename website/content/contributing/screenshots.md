@@ -45,6 +45,13 @@ several scroll positions, menu bar formats, Quick Settings sizes and narrow moni
 `-menu.png` crops for comparison with macOS. The website's GNOME images come from these unscaled menu crops; review the
 raw output before converting it to WebP.
 
+The three menu crops are 880 × 760 logical pixels on both platforms. macOS exports at 2× (1760 × 1520 pixels); GNOME
+Shell captures at 1× (880 × 760 pixels). The status strips are 520 logical pixels wide. macOS draws a 28-pixel menu bar
+at 3×; GNOME Shell captures its 32-pixel top bar at 1×. Compare them at logical size, not at raw pixel size. The
+`menubar-comparison.png` capture selects Claude session, weekly, Fable and Sonnet, then Codex session and weekly, in
+provider order, matching the macOS export. Both History captures use 30 days with daily buckets. Usage percentages and
+reset times depend on the capture clock.
+
 Use the filename to find a specific state:
 
 | Prefix or example                                                                     | What it shows                                                     |

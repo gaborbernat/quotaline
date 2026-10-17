@@ -161,7 +161,7 @@ export const displayMethods = {
                             History: 'document-open-recent-symbolic',
                             Settings: 'emblem-system-symbolic',
                         }[tab],
-                        icon_size: 16,
+                        icon_size: 11,
                     }),
                 );
                 content.add_child(label(tab));
@@ -210,7 +210,7 @@ export const displayMethods = {
     },
 
     _menuWidth(this: TokenPanel, monitor: PanelMonitor): number {
-        return menuWidth(monitor.width, this._tab === 'History' ? 890 : 880);
+        return menuWidth(monitor.width, 880);
     },
 
     _alignMenu(this: TokenPanel, monitor: PanelMonitor, width: number): void {

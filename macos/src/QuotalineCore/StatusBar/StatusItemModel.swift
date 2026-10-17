@@ -131,7 +131,7 @@ public enum StatusItemBuilder {
     let providers = snapshots.keys.sorted().map { provider in
       SelectionProvider(
         id: provider.rawValue,
-        windows: snapshots[provider]!.windows.map { SelectionWindow(id: $0.id, isActive: $0.isActive) })
+        windows: snapshots[provider]!.record.windows.map { SelectionWindow(id: $0.id, isActive: $0.active) })
     }
     return QuotalineRust.defaultWindowSelection(providers: providers).map { selected in
       WindowKey(provider: ProviderID(rawValue: selected.provider)!, windowID: selected.windowId)

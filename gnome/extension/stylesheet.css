@@ -1,13 +1,13 @@
-.tmb-panel-cells { spacing: 7px; background-color: #303034; border-radius: 6px; }
+.tmb-panel-cells { spacing: 4px; background-color: #303034; border-radius: 6px; }
 .tmb-light .tmb-panel-cells { background-color: #e3e3e8; }
 .tmb-panel-cell { spacing: 0; padding: 1px 1px; }
 .tmb-panel-separator { width: 1px; height: 20px; background-color: #a4a4ac; }
 .tmb-light .tmb-panel-separator { background-color: #55555c; }
 .tmb-panel-cell-stacked { spacing: 0; }
-.tmb-panel-line { font-size: 0.9em; text-align: center; }
+.tmb-panel-line { font-size: 8pt; text-align: center; }
 .tmb-panel-inline { font-size: 8pt; }
 .tmb-panel-value { font-weight: bold; }
-.tmb-panel-cell-stacked .tmb-panel-value { font-size: 1.04em; }
+.tmb-panel-cell-stacked .tmb-panel-value { font-size: 10pt; }
 .tmb-panel-label { font-size: 9pt; padding-left: 4px; }
 .tmb-panel-mini { spacing: 4px; }
 .tmb-panel-mini-rows { spacing: 0; }
@@ -46,8 +46,8 @@
 .tmb-header-heading { spacing: 1px; }
 .tmb-header-updated, .tmb-header-activity { font-size: 8pt; opacity: 0.68; }
 .tmb-tabs { spacing: 0; border: 1px solid rgba(128,128,128,0.38); border-radius: 8px; }
-.tmb-tab { min-width: 100px; padding: 3px 18px; font-size: 10pt; text-align: center; }
-.tmb-tab-content { spacing: 7px; }
+.tmb-tab { min-width: 0; padding: 3px 15px; font-size: 10pt; text-align: center; }
+.tmb-tab-content { spacing: 5px; }
 .tmb-tab:hover { background-color: rgba(128,128,128,0.16); }
 .tmb-tab-selected, .tmb-tab-selected:hover { background-color: rgba(160,160,160,0.42); color: white; font-weight: bold; border-radius: 6px; }
 .tmb-light .tmb-tab-selected, .tmb-light .tmb-tab-selected:hover { color: #222; }
@@ -75,7 +75,7 @@
 .tmb-card-title { font-size: 10.5pt; font-weight: bold; }
 .tmb-chip { padding: 3px 9px; background-color: rgba(128,128,128,0.22); border-radius: 7px; font-size: 8.5pt; }
 .tmb-chip-action:hover, .tmb-chip-action:focus { background-color: rgba(128,128,128,0.32); }
-.tmb-icon-button { min-width: 28px; min-height: 28px; padding: 3px 6px; border: 1px solid rgba(128,128,128,0.42); border-radius: 7px; text-align: center; }
+.tmb-icon-button { min-width: 14px; min-height: 14px; padding: 2px 3px; border: 1px solid rgba(128,128,128,0.42); border-radius: 7px; text-align: center; }
 .tmb-icon-button:hover { background-color: rgba(128,128,128,0.18); }
 .tmb-card-body { spacing: 1px; padding: 4px 11px 6px; }
 .tmb-provider-notice { spacing: 8px; padding: 7px 9px; margin: 5px 0 3px; border-radius: 7px; background-color: rgba(128,128,128,0.16); }
@@ -243,8 +243,8 @@
 .tmb-legend-check-on { background-color: #4d91db; border-color: #4d91db; color: white; }
 .tmb-legend-off { opacity: 0.44; }
 .tmb-history-legend-help { padding-top: 4px; font-size: 8pt; opacity: 0.72; }
-.tmb-footer { spacing: 8px; padding: 8px 14px; border-top: 1px solid rgba(128,128,128,0.20); background-color: rgba(128,128,128,0.08); }
+.tmb-footer { spacing: 8px; padding: 6px 12px; border-top: 1px solid rgba(128,128,128,0.20); background-color: rgba(128,128,128,0.08); }
 .tmb-footer-group { spacing: 8px; }
-.tmb-footer-action { min-height: 28px; padding: 5px 11px; font-weight: bold; }
+.tmb-footer-action { min-height: 20px; padding: 3px 8px; font-weight: bold; }
 .tmb-link { padding: 3px 5px; font-size: 9pt; opacity: 0.78; }
 .tmb-link:hover { opacity: 1; }

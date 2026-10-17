@@ -171,9 +171,9 @@ async function runScenario() {
                     const chart = findActor(root, actor => actor.has_style_class_name?.('tmb-chart'));
                     const legend = findActor(root, actor => actor.has_style_class_name?.('tmb-history-legend'));
                     return (
-                        root.width >= 888 &&
+                        root.width >= 875 &&
                         chart?.has_allocation() &&
-                        chart.width >= 600 &&
+                        chart.width >= 580 &&
                         legend?.has_allocation() &&
                         legend.get_transformed_position()[0] >= chart.get_transformed_position()[0] + chart.width
                     );

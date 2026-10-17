@@ -454,7 +454,7 @@ export class TokenPanel {
             'tmb-control tmb-footer-action',
         );
         const refreshContent = box(false, 'tmb-footer-action-content');
-        refreshContent.add_child(new St.Icon({icon_name: 'view-refresh-symbolic', icon_size: 16}));
+        refreshContent.add_child(new St.Icon({icon_name: 'view-refresh-symbolic', icon_size: 13}));
         refreshContent.add_child(label('Refresh'));
         refresh.set_child(refreshContent);
         this._tooltip.attach(
@@ -494,7 +494,7 @@ export class TokenPanel {
                         GLib.build_filenamev([this.path, 'icons', 'report-issue-symbolic.svg']),
                     ),
                 }),
-                icon_size: 16,
+                icon_size: 13,
             }),
         );
         reportContent.add_child(label('Report issue'));
@@ -540,7 +540,7 @@ export class TokenPanel {
             'tmb-control tmb-footer-action',
         );
         const quitContent = box(false, 'tmb-footer-action-content');
-        quitContent.add_child(new St.Icon({icon_name: 'system-shutdown-symbolic', icon_size: 16}));
+        quitContent.add_child(new St.Icon({icon_name: 'system-shutdown-symbolic', icon_size: 13}));
         quitContent.add_child(label('Quit'));
         this._footerQuit.set_child(quitContent);
         this._footerQuit.accessible_name = 'Quit';

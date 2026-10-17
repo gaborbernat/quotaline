@@ -122,7 +122,7 @@ const methods = {
                 },
                 setup || signIn ? 'tmb-small-control' : 'tmb-icon-button',
             );
-            if (!setup && !signIn) action.set_child(new St.Icon({icon_name: 'view-refresh-symbolic', icon_size: 16}));
+            if (!setup && !signIn) action.set_child(new St.Icon({icon_name: 'view-refresh-symbolic', icon_size: 12}));
             action.accessible_name = `${
                 setup ? 'Set up' : signIn ? 'Sign in to' : retry ? 'Retry' : 'Refresh'
             } ${provider.name}`;
@@ -140,7 +140,7 @@ const methods = {
             top.add_child(action);
             if (signIn) {
                 const settingsAction = new St.Button({
-                    child: new St.Icon({icon_name: 'preferences-system-symbolic', icon_size: 16}),
+                    child: new St.Icon({icon_name: 'preferences-system-symbolic', icon_size: 12}),
                     style_class: 'tmb-icon-button',
                     can_focus: true,
                     reactive: true,

@@ -209,8 +209,7 @@ export const displayMethods = {
     },
 
     _menuWidth(this: TokenPanel, monitor: PanelMonitor): number {
-        const [x] = this._indicator.get_transformed_position();
-        return menuWidth(x, this._indicator.width, monitor, this._tab === 'History' ? 890 : 860);
+        return menuWidth(monitor.width, this._tab === 'History' ? 890 : 880);
     },
 
     _alignMenu(this: TokenPanel, monitor: PanelMonitor, width: number): void {
@@ -274,7 +273,7 @@ export const displayMethods = {
             );
         }
         this._compact = width < 790;
-        this._headerInfo.visible = width >= 480;
+        this._headerInfo.visible = width >= 800;
         this._headerBalance.visible = width >= 800;
         if (width < 800) this._root.add_style_class_name('tmb-root-compact-header');
         else this._root.remove_style_class_name('tmb-root-compact-header');

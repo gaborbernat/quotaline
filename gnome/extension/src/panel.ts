@@ -396,7 +396,7 @@ export class TokenPanel {
         this._root.add_action_full('tmb-shortcuts', Clutter.EventPhase.CAPTURE, shortcuts);
         const monitor = this._panelMonitor();
         this._monitorWidth = monitor.width;
-        this._root.width = Math.min(860, Math.max(280, this._monitorWidth - 32));
+        this._root.width = Math.min(880, Math.max(280, this._monitorWidth - 32));
         this._compact = this._root.width < 790;
         const header = box(false, 'tmb-header');
         this._headerInfo = box(false, 'tmb-header-info');
@@ -469,6 +469,19 @@ export class TokenPanel {
             },
             'tmb-control tmb-footer-action',
         );
+        const reportContent = box(false, 'tmb-footer-action-content');
+        reportContent.add_child(
+            new St.Icon({
+                gicon: new Gio.FileIcon({
+                    file: Gio.File.new_for_path(
+                        GLib.build_filenamev([this.path, 'icons', 'report-issue-symbolic.svg']),
+                    ),
+                }),
+                icon_size: 14,
+            }),
+        );
+        reportContent.add_child(label('Report issue'));
+        report.set_child(reportContent);
         this._tooltip.attach(report, 'Report issue', 'Opens a draft issue with diagnostics when available.');
         this._footerPrimary.add_child(report);
         this._footerPrimarySpacer = new St.Widget({x_expand: true});

@@ -98,7 +98,8 @@
 .tmb-quota-title-group { spacing: 1px; }
 .tmb-quota-heading { spacing: 7px; }
 .tmb-quota-title { font-size: 9.5pt; }
-.tmb-quota-duration, .tmb-quota-detail { font-size: 8pt; opacity: 0.66; }
+.tmb-quota-duration, .tmb-quota-detail { font-size: 8pt; opacity: 0.55; }
+.tmb-footer-action-content { spacing: 5px; }
 .tmb-quota-identifier { font-family: monospace; }
 .tmb-meter { height: 6px; border-radius: 3px; background-color: rgba(128,128,128,0.32); }
 .tmb-meter-fill { height: 6px; border-radius: 3px; background-gradient-direction: horizontal; background-gradient-start: #45b96e; background-gradient-end: #65cb7c; }

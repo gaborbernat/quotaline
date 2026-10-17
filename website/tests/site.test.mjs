@@ -12,6 +12,10 @@ test('site builds with versioned links and platform guides', context => {
     assert.equal(result.status, 0, result.stderr);
     const start = fs.readFileSync(path.join(destination, 'start/index.html'), 'utf8');
     assert.match(start, /\/en\/preview\/start\/connect\//);
+    assert.match(start, /gnome-menubar/);
+    assert.match(start, /gnome-usage/);
+    assert.match(start, /menubar-light/);
+    assert.match(start, /popover-usage-light/);
     const menuBar = fs.readFileSync(path.join(destination, 'reference/menu-bar/index.html'), 'utf8');
     assert.match(menuBar, /\/en\/preview\/reference\/settings\/menu-bar\/#custom-templates/);
     const home = fs.readFileSync(path.join(destination, 'index.html'), 'utf8');
@@ -19,6 +23,9 @@ test('site builds with versioned links and platform guides', context => {
     assert.doesNotMatch(home, /Build from source<\/a>/);
     assert.match(home, /href=\/en\/preview\/macos\//);
     assert.match(home, /href=\/en\/preview\/gnome\//);
+    assert.match(home, /id=hero-tab-all/);
+    assert.match(home, /id=hero-tab-macos/);
+    assert.match(home, /id=hero-tab-gnome/);
     const navigation = home.match(/<nav class=nav aria-label=Main>(.*?)<\/nav>/s)?.[1];
     assert.ok(navigation);
     assert.equal((navigation.match(/<a /g) ?? []).length, (navigation.match(/<svg /g) ?? []).length);
@@ -29,6 +36,21 @@ test('site builds with versioned links and platform guides', context => {
     for (const file of ['llms.txt', 'reference/providers/index.md', 'gnome/index.html', 'macos/index.html']) {
         assert.ok(fs.statSync(path.join(destination, file)).size > 0);
     }
+});
+
+test('a frontend entry adds navigation and install cards', context => {
+    const {destination, result} = build(context, undefined, {}, source => {
+        fs.appendFileSync(path.join(source, 'data/platforms.yaml'), `\n- id: tui\n  name: TUI\n  navIcon: M4 4h16v16H4z\n  label: Terminal\n  requires: A terminal\n  title: Terminal app\n  summary: Quota readings in a terminal.\n  startTitle: Install the TUI\n  startSummary: Install the terminal app.\n  action: Install the TUI\n  install: tui/install/\n`);
+        fs.mkdirSync(path.join(source, 'content/tui'));
+        fs.writeFileSync(path.join(source, 'content/tui/_index.md'), '---\ntitle: TUI\nlayout: platform\n---\n');
+        fs.writeFileSync(path.join(source, 'content/tui/install.md'), '---\ntitle: Install\n---\n');
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const home = fs.readFileSync(path.join(destination, 'index.html'), 'utf8');
+    const start = fs.readFileSync(path.join(destination, 'start/index.html'), 'utf8');
+    assert.match(home, /href=\/en\/preview\/tui\//);
+    assert.match(start, /Install the TUI/);
+    assert.ok(fs.statSync(path.join(destination, 'tui/index.html')).size > 0);
 });
 
 test('site shows both platform previews without hidden desktop state', context => {
@@ -85,16 +107,17 @@ test('site rejects missing screenshots', context => {
     assert.match(result.stderr, /Missing screenshot images\/missing-doc-image/);
 });
 
-function build(context, addition, environment = {}) {
+function build(context, addition, environment = {}, changeSource = () => {}) {
     const temporary = path.join(root, 'target/tmp');
     fs.mkdirSync(temporary, {recursive: true});
     const scratch = fs.mkdtempSync(path.join(temporary, 'site-test-'));
     context.after(() => fs.rmSync(scratch, {recursive: true, force: true}));
     const source = path.join(scratch, 'site');
     fs.mkdirSync(source);
-    for (const item of ['hugo.toml', 'content', 'layouts', 'assets', 'static', 'resources']) {
+    for (const item of ['hugo.toml', 'content', 'layouts', 'assets', 'data', 'static', 'resources']) {
         fs.cpSync(path.join(root, 'website', item), path.join(source, item), {recursive: true});
     }
+    changeSource(source);
     if (addition) {
         fs.writeFileSync(path.join(source, 'content/link-check.md'), `---\ntitle: Link check\n---\n${addition}\n`);
     }

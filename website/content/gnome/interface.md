@@ -41,4 +41,4 @@ These captures come from an isolated GNOME Shell test session with demo data:
 
 {{< shot gnome="gnome-settings" alt="GNOME Settings tab with provider and display controls" >}}
 
-The [shared reference](/reference/) describes the controls common to macOS and GNOME.
+The [shared reference](/reference/) describes provider readings shared across frontends.

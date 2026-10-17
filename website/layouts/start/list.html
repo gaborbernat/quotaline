@@ -2,40 +2,9 @@
 <section class="page page-wide start-page">
   <div class="wrap">
     <span class="section-kicker">Get started</span>
-    <h1 class="page-title">Start with your desktop.</h1>
-    <p class="page-lede">The provider readings are shared. Pick the interface you run.</p>
-    <div class="platform-cards">
-      <a class="platform-card" href="{{ "macos/" | relURL }}">
-        <div class="platform-card-media platform-card-macos">
-          {{ range $variant := (slice "light" "dark") }}
-            {{ with resources.Get (printf "images/menubar-%s.webp" $variant) }}
-              {{ partial "shot-image.html" (dict "image" . "scale" 3 "alt" "macOS menu bar with quota cells"
-                   "loading" "lazy" "class" (printf "shot shot-bar only-%s" $variant)) }}
-            {{ end }}
-          {{ end }}
-        </div>
-        <div class="platform-card-copy">
-          <span class="platform-card-label">macOS</span>
-          <h2>Install the app</h2>
-          <p>Choose a direct download, Homebrew or the App Store.</p>
-          <span class="platform-card-action">macOS guide <span aria-hidden="true">→</span></span>
-        </div>
-      </a>
-      <a class="platform-card" href="{{ "gnome/" | relURL }}">
-        <div class="platform-card-media platform-card-gnome">
-          {{ with resources.Get "images/gnome-usage.webp" }}
-            {{ partial "shot-image.html" (dict "image" . "scale" 2
-                 "alt" "GNOME Shell menu with provider quota cards" "loading" "lazy" "class" "shot") }}
-          {{ end }}
-        </div>
-        <div class="platform-card-copy">
-          <span class="platform-card-label">GNOME Shell 50</span>
-          <h2>Install the extension</h2>
-          <p>Build the Shell extension and local Rust service.</p>
-          <span class="platform-card-action">GNOME guide <span aria-hidden="true">→</span></span>
-        </div>
-      </a>
-    </div>
+    <h1 class="page-title">Choose a frontend</h1>
+    <p class="page-lede">Pick an interface, then connect a provider.</p>
+    {{ partial "platform-cards.html" (dict "start" true) }}
     <div class="start-next">
       <h2>Connect and choose models</h2>
       <ol>

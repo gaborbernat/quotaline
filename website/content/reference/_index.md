@@ -1,12 +1,12 @@
 ---
 title: Shared reference
-description: Providers, quota readings, history, settings and privacy shared by both frontends.
+description: Provider data, history, settings and privacy shared across frontends.
 weight: 3
 aliases: [/reference/interface/]
 ---
 
-Quotaline reads the same provider limits on [macOS](/macos/) and [GNOME](/gnome/). Use these pages for behavior shared
-by both interfaces. Platform guides cover installation and desktop-only features.
+Use these pages for provider data and behavior shared across frontends. Each [frontend guide](/start/) covers its
+installation and interface-specific features.
 
 The [provider pages](/reference/providers/) explain credential sources and reported data.
 [Privacy and collection](/explanation/) explain local storage, refresh timing and what leaves your machine.

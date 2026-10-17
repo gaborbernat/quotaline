@@ -34,4 +34,4 @@ For unreleased changes, [build from source](/contributing/build/).
 [Display settings](/reference/settings/menu-bar/), then open [Usage](/reference/usage/) or
 [History](/reference/history/). **Launch at login** and **Open Login Items** are in Settings > About.
 
-The [shared reference](/reference/) describes controls used by both frontends.
+The [shared reference](/reference/) describes provider readings shared across frontends.

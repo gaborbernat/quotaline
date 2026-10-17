@@ -1,28 +1,71 @@
 {{ define "main" }}
 <section class="hero">
-  <div class="wrap hero-grid">
+  <div class="wrap hero-grid" data-gallery>
     <div class="hero-copy">
-      <span class="eyebrow">Quotaline · macOS and GNOME</span>
+      <span class="eyebrow">Quotaline · coding plan usage</span>
       <h1>Know your quota before you hit it.</h1>
+      <div class="hero-selector">
+        <div class="platform-gallery-tabs" role="tablist" aria-label="Preview frontend">
+          <button type="button" role="tab" id="hero-tab-all" aria-controls="hero-panel-all"
+            aria-selected="true" tabindex="0">All</button>
+          {{ range hugo.Data.platforms }}
+            <button type="button" role="tab" id="hero-tab-{{ .id }}" aria-controls="hero-panel-{{ .id }}"
+              aria-selected="false" tabindex="-1">{{ .name }}</button>
+          {{ end }}
+        </div>
+      </div>
       <p class="lede">See coding plan limits, reset times and usage history where you work. Claude, Codex, Gemini, Antigravity, Cursor and Copilot share one view.</p>
       <div class="hero-actions">
-        <a class="button button-primary" href="{{ "macos/" | relURL }}">Explore macOS <span aria-hidden="true">↗</span></a>
-        <a class="button button-secondary" href="{{ "gnome/" | relURL }}">Explore GNOME <span aria-hidden="true">↗</span></a>
+        {{ range hugo.Data.platforms }}
+          <a class="button button-secondary" href="{{ printf "%s/" .id | relURL }}">Explore {{ .name }} <span aria-hidden="true">↗</span></a>
+        {{ end }}
       </div>
       <p class="hero-note">Reads your existing provider sessions. No Quotaline account or telemetry.</p>
     </div>
     <div class="hero-media">
-      <div class="hero-image">
-        {{ range $variant := (slice "light" "dark") }}
-          {{ with resources.Get (printf "images/popover-usage-%s.webp" $variant) }}
-            {{ partial "shot-image.html" (dict
-                 "image" . "scale" 2 "fetchpriority" "high"
-                 "alt" "Quotaline macOS Usage panel with quota meters and reset times"
-                 "class" (printf "shot only-%s" $variant)) }}
-          {{ end }}
+      <div class="hero-panel hero-panel-all" role="tabpanel" id="hero-panel-all" aria-labelledby="hero-tab-all">
+        {{ range hugo.Data.platforms }}
+          <div class="hero-preview">
+            {{ $platform := . }}
+            {{ if .variants }}
+              {{ range $variant := .variants }}
+                {{ $path := printf $platform.overviewImage $variant }}
+                {{ with resources.Get $path }}
+                  {{ partial "shot-image.html" (dict "image" . "scale" $platform.overviewScale
+                       "alt" $platform.overviewAlt "loading" "lazy" "class" (printf "shot only-%s" $variant)) }}
+                {{ end }}
+              {{ end }}
+            {{ else }}
+              {{ with resources.Get .overviewImage }}
+                {{ partial "shot-image.html" (dict "image" . "scale" $platform.overviewScale
+                     "alt" $platform.overviewAlt "loading" "lazy" "class" "shot") }}
+              {{ end }}
+            {{ end }}
+            <span>{{ .name }} · Usage</span>
+          </div>
         {{ end }}
       </div>
-      <span class="hero-media-label">macOS · Usage</span>
+      {{ range hugo.Data.platforms }}
+        {{ $platform := . }}
+        <div class="hero-panel" role="tabpanel" id="hero-panel-{{ .id }}"
+          aria-labelledby="hero-tab-{{ .id }}" hidden>
+          {{ if .variants }}
+            {{ range $variant := .variants }}
+              {{ $path := printf $platform.overviewImage $variant }}
+              {{ with resources.Get $path }}
+                {{ partial "shot-image.html" (dict "image" . "scale" $platform.overviewScale
+                     "alt" $platform.overviewAlt "loading" "lazy" "class" (printf "shot only-%s" $variant)) }}
+              {{ end }}
+            {{ end }}
+          {{ else }}
+            {{ with resources.Get .overviewImage }}
+              {{ partial "shot-image.html" (dict "image" . "scale" $platform.overviewScale
+                   "alt" $platform.overviewAlt "loading" "lazy" "class" "shot") }}
+            {{ end }}
+          {{ end }}
+          <span class="hero-media-label">{{ .name }} · Usage</span>
+        </div>
+      {{ end }}
     </div>
   </div>
 </section>
@@ -30,44 +73,11 @@
 <section class="platform-section" aria-labelledby="platform-heading">
   <div class="wrap">
     <div class="section-head">
-      <span class="section-kicker">Choose your desktop</span>
-      <h2 id="platform-heading">Same quota data. Native to each desktop.</h2>
-      <p>Install the interface for your desktop. Provider data and history follow the same rules.</p>
+      <span class="section-kicker">Choose a frontend</span>
+      <h2 id="platform-heading">Choose how to view your quota.</h2>
+      <p>Each frontend uses the same provider data and history rules.</p>
     </div>
-    <div class="platform-cards">
-      <a class="platform-card" href="{{ "macos/install/" | relURL }}">
-        <div class="platform-card-media platform-card-macos">
-          {{ range $variant := (slice "light" "dark") }}
-            {{ with resources.Get (printf "images/menubar-%s.webp" $variant) }}
-              {{ partial "shot-image.html" (dict
-                   "image" . "scale" 3 "alt" "Quota cells in the macOS menu bar" "loading" "lazy"
-                   "class" (printf "shot shot-bar only-%s" $variant)) }}
-            {{ end }}
-          {{ end }}
-        </div>
-        <div class="platform-card-copy">
-          <span class="platform-card-label">macOS 15, 26 and 27</span>
-          <h3>Menu bar app</h3>
-          <p>A SwiftUI panel, desktop widgets and native notifications.</p>
-          <span class="platform-card-action">Install on macOS <span aria-hidden="true">→</span></span>
-        </div>
-      </a>
-      <a class="platform-card" href="{{ "gnome/install/" | relURL }}">
-        <div class="platform-card-media platform-card-gnome">
-          {{ with resources.Get "images/gnome-usage.webp" }}
-            {{ partial "shot-image.html" (dict
-                 "image" . "scale" 2 "alt" "GNOME Shell Usage menu with provider quota cards"
-                 "loading" "lazy" "class" "shot") }}
-          {{ end }}
-        </div>
-        <div class="platform-card-copy">
-          <span class="platform-card-label">GNOME Shell 50</span>
-          <h3>Shell extension</h3>
-          <p>A panel menu, Quick Settings tile and local Rust service.</p>
-          <span class="platform-card-action">Install on GNOME <span aria-hidden="true">→</span></span>
-        </div>
-      </a>
-    </div>
+    {{ partial "platform-cards.html" (dict "start" false) }}
   </div>
 </section>
 
@@ -90,8 +100,8 @@
 <section class="section" aria-labelledby="shared-heading">
   <div class="wrap">
     <div class="section-head">
-      <span class="section-kicker">Shared across both frontends</span>
-      <h2 id="shared-heading">Quota, history and privacy.</h2>
+      <span class="section-kicker">Shared across frontends</span>
+      <h2 id="shared-heading">Quota, history and privacy</h2>
     </div>
     <div class="cards feature-cards">
       <a class="card card-link" href="{{ "reference/usage/" | relURL }}">
@@ -118,7 +128,7 @@
     <div>
       <span class="section-kicker">Documentation</span>
       <h2 id="docs-heading">Go straight to the right guide.</h2>
-      <p>Start with your desktop. Use the shared reference for providers and data, or open the help guide when something stops updating.</p>
+      <p>Start with a frontend guide. Use the shared reference for provider data, or open Help when readings stop updating.</p>
     </div>
     <div class="docs-links">
       <a href="{{ "start/" | relURL }}"><span>01</span> Get started <span aria-hidden="true">↗</span></a>

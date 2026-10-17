@@ -9,4 +9,4 @@ Quotaline runs as a Shell extension backed by a local Rust service. The panel me
 **Settings** without a separate window. A Quick Settings tile shows the latest cached reading.
 
 Start with [installation](/gnome/install/), then [connect a provider](/start/connect/). The
-[shared reference](/reference/) explains quota readings, History and settings used by both frontends.
+[shared reference](/reference/) explains quota readings, History and settings used across frontends.

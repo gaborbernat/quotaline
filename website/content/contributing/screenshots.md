@@ -40,23 +40,19 @@ fresh Shell in an isolated test session. For manual interaction, run `mise exec 
 window when finished. The manual preview starts a second desktop portal under your account, which can make RustDesk
 select the wrong Wayland session. Do not use it for automated tests.
 
-Refresh the full headless Shell gallery in `target/shell-screenshots/` with `mise exec -- just screenshots`. These
-include the top, middle and bottom of Usage, History and Settings, each menu bar format, and all three Quick Settings
-snapshot sizes. Narrow monitor captures include Usage and the top and bottom of History and Settings. Each open popover
-capture also has a `-menu.png` crop for side-by-side comparison with the macOS reference. These can be reviewed without
-restarting the desktop session. `claude-organization-menu.png` and `claude-masked-menu.png` show the account chips
-before and after the privacy setting. `quota-help.png` shows the quota tooltip with usage, remaining amount and pace
-detail. `settings-help.png` shows contextual help on the menu bar controls; `demo-help.png` and `notifications-help.png`
-show help in the lower Settings sections. `log-help.png` shows help on the Log severity control.
+The command writes the headless Shell gallery to `target/shell-screenshots/`. It captures Usage, History and Settings at
+several scroll positions, menu bar formats, Quick Settings sizes and narrow monitors. Open popover captures include
+`-menu.png` crops for comparison with macOS. The website's GNOME images come from these unscaled menu crops; review the
+raw output before converting it to WebP.
 
-`history-help.png` shows metric help in the History view. `panel-help.png` shows the status item summary on hover.
-`footer-help.png` shows help placed above its footer control. `history-empty.png` shows History before any readings have
-been recorded. `settings-provider-details-menu.png` shows the expanded credential source and setup control.
-`history-hovered-menu.png` shows the chart with one legend series highlighted. `history-keyboard-selected-menu.png`
-shows a reading selected from the chart with the keyboard. `usage-light.png`, `history-light.png`, `settings-light.png`,
-`usage-high-contrast.png`, `history-high-contrast.png` and `settings-high-contrast.png` show the menu under GNOME's
-light and high contrast settings. `stale-claude-setup-light-card.png` shows a retained reading and its muted panel value
-under the light setting. `provider-visibility-mixed.png`, `provider-visibility-empty.png`, and
-`settings-undiscovered-provider.png` show provider discovery and setup controls without logging out.
-`settings-full-log-sparse-menu.png` and `local/settings-full-log-retained-menu.png` show the expanded log with one and
-many entries.
+Use the filename to find a specific state:
+
+| Prefix or example                                                                     | What it shows                                                     |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `usage-*`, `history-*`, `settings-*`                                                  | Main flows and scroll positions.                                  |
+| `*-light.png`, `*-high-contrast.png`                                                  | GNOME appearance variants.                                        |
+| `*-help.png`                                                                          | Tooltips for quota, panel, footer, History and Settings controls. |
+| `claude-organization-menu.png`, `claude-masked-menu.png`                              | Account chips before and after privacy masking.                   |
+| `history-empty.png`, `history-hovered-menu.png`, `history-keyboard-selected-menu.png` | Empty, pointer and keyboard chart states.                         |
+| `provider-visibility-*.png`, `settings-undiscovered-provider.png`                     | Provider discovery and setup controls.                            |
+| `settings-full-log-sparse-menu.png`, `local/settings-full-log-retained-menu.png`      | Expanded logs with one or many entries.                           |

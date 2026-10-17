@@ -44,6 +44,11 @@
       <script defer src="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}" crossorigin="anonymous"></script>
     {{ end }}
   {{ end }}
+  {{ if or .IsHome (eq .Layout "platform") }}
+    {{ with resources.Get "js/gallery.js" | resources.Minify | resources.Fingerprint }}
+      <script defer src="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}" crossorigin="anonymous"></script>
+    {{ end }}
+  {{ end }}
 </body>
 
 </html>

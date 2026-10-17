@@ -20,7 +20,6 @@ rate limit,menu bar,macos menu bar app,gnome shell extension,linux\
 tagline = "Your AI coding plan limits, one glance away"
 repository = "https://github.com/quotaline/quotaline"
 latestRelease = "https://github.com/quotaline/quotaline/releases"
-minimumOS = "macOS 15 · GNOME Shell 50"
 license = "MIT"
 author = "Bernát Gábor"
 brandGradientStart = "#4C3BE0"
@@ -41,20 +40,6 @@ url = "/reference/"
 weight = 2
 [menu.main.params]
 icon = "M4 5h7l2 2h7v12H4z"
-
-[[menu.main]]
-name = "macOS"
-url = "/macos/"
-weight = 3
-[menu.main.params]
-icon = "M3 5h18v12H3zM8 21h8m-4-4v4"
-
-[[menu.main]]
-name = "GNOME"
-url = "/gnome/"
-weight = 4
-[menu.main.params]
-icon = "M3 4h18v3H3zM3 9h18v11H3zM7 13h4m-4 3h6"
 
 [[menu.main]]
 name = "Help"
@@ -96,6 +81,9 @@ rel = "alternate"
 
 [markup.goldmark.renderer]
 unsafe = true
+
+[markup.highlight]
+noClasses = false
 
 [markup.tableOfContents]
 startLevel = 2

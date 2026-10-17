@@ -1,0 +1,36 @@
+{{- $start := .start -}}
+<div class="platform-cards">
+  {{ range hugo.Data.platforms }}
+    <a class="platform-card" href="{{ (cond $start .id .install) | relURL }}">
+      <div class="platform-card-media platform-card-{{ .id }}">
+        {{ $platform := . }}
+        {{ range $picture := (slice
+            (dict "path" .cardImage "scale" .cardScale "alt" .cardAlt "class" "shot-bar")
+            (dict "path" .cardUsageImage "scale" .cardUsageScale "alt" .cardUsageAlt "class" "shot-usage")) }}
+          {{ with $picture.path }}
+            {{ if $platform.variants }}
+              {{ range $variant := $platform.variants }}
+                {{ $path := printf $picture.path $variant }}
+                {{ with resources.Get $path }}
+                  {{ partial "shot-image.html" (dict "image" . "scale" $picture.scale "alt" $picture.alt
+                       "loading" "lazy" "class" (printf "shot %s only-%s" $picture.class $variant)) }}
+                {{ else }}{{ errorf "Missing platform image %s" $path }}{{ end }}
+              {{ end }}
+            {{ else }}
+              {{ with resources.Get . }}
+                {{ partial "shot-image.html" (dict "image" . "scale" $picture.scale "alt" $picture.alt
+                     "loading" "lazy" "class" (printf "shot %s" $picture.class)) }}
+              {{ else }}{{ errorf "Missing platform image %s" $picture.path }}{{ end }}
+            {{ end }}
+          {{ end }}
+        {{ end }}
+      </div>
+      <div class="platform-card-copy">
+        <span class="platform-card-label">{{ cond $start .name .label }}</span>
+        {{ if $start }}<h2>{{ .startTitle }}</h2>{{ else }}<h3>{{ .title }}</h3>{{ end }}
+        <p>{{ cond $start .startSummary .summary }}</p>
+        <span class="platform-card-action">{{ cond $start (printf "%s guide" .name) .action }} <span aria-hidden="true">→</span></span>
+      </div>
+    </a>
+  {{ end }}
+</div>

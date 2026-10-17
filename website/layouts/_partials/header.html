@@ -6,7 +6,25 @@
     </a>
     <nav class="nav" aria-label="Main">
       {{- $current := .RelPermalink -}}
-      {{ range .Site.Menus.main }}
+      {{ range first 2 .Site.Menus.main }}
+        {{- $url := .URL | relLangURL -}}
+        {{- $exact := eq $current $url -}}
+        {{- $section := and (not $exact) (strings.HasPrefix $current $url) -}}
+        <a href="{{ $url }}"{{ if $exact }} aria-current="page"{{ else if $section }} class="section-current"{{ end }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ .Params.icon }}" /></svg>
+          {{ .Name }}</a>
+      {{ end }}
+      {{ range hugo.Data.platforms }}
+        {{- $url := printf "%s/" .id | relLangURL -}}
+        {{- $exact := eq $current $url -}}
+        {{- $section := and (not $exact) (strings.HasPrefix $current $url) -}}
+        <a href="{{ $url }}"{{ if $exact }} aria-current="page"{{ else if $section }} class="section-current"{{ end }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ .navIcon }}" /></svg>
+          {{ .name }}</a>
+      {{ end }}
+      {{ range after 2 .Site.Menus.main }}
         {{- $url := .URL | relLangURL -}}
         {{- $exact := eq $current $url -}}
         {{- $section := and (not $exact) (strings.HasPrefix $current $url) -}}

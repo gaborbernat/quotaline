@@ -2,7 +2,7 @@
   <div class="wrap">
     <div>
       {{ .Site.Title }}, {{ .Site.Params.license }} licensed, by
-      <a href="https://bernat.tech">{{ .Site.Params.author }}</a>. Requires {{ .Site.Params.minimumOS }}.
+      <a href="https://bernat.tech">{{ .Site.Params.author }}</a>. Requires {{ range $index, $platform := hugo.Data.platforms }}{{ if $index }} · {{ end }}{{ .requires }}{{ end }}.
     </div>
     <nav class="foot-links" aria-label="Footer">
       <a href="{{ .Site.Params.repository }}">Source</a>

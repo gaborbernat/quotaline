@@ -12,9 +12,9 @@ export async function run() {
         if (!indicator) throw new Error('Quotaline indicator is missing');
         const expected = required(GLib.getenv('TMB_EXPECT_LABELS')).split(',');
         const labels = () =>
-            (findActor(indicator, actor => actor.has_style_class_name?.('tmb-panel-cells'))?.get_children() ?? []).map(
-                cell => cell.get_children()[0]?.text,
-            );
+            (findActor(indicator, actor => actor.has_style_class_name?.('tmb-panel-cells'))?.get_children() ?? [])
+                .filter(actor => actor.has_style_class_name?.('tmb-panel-cell'))
+                .map(cell => cell.get_children()[0]?.text);
         await waitOrFail(() => labels().length === expected.length, 'Compact panel labels did not load');
         if (labels().join(',') !== expected.join(','))
             throw new Error(`Compact panel labels differ from provider names: ${labels().join(',')}`);

@@ -20,14 +20,14 @@ export async function run() {
             );
         }, 'The exhausted Cursor quota did not reach Usage');
         const fill = findActor(quota(), actor => actor.has_style_class_name?.('tmb-meter-fill'), St.Widget);
-        if (!fill?.get_style()?.includes('#e6a993'))
-            throw new Error(`The exhausted quota does not use the muted palette: ${fill?.get_style()}`);
+        if (!fill?.get_style()?.includes('#ff8873'))
+            throw new Error(`The exhausted quota does not use the warning color: ${fill?.get_style()}`);
         const panelValue = findActor(
             indicator,
             actor => actor.has_style_class_name?.('tmb-panel-value') && actor.text === '100%',
             St.Widget,
         );
-        if (!optionalInstance(panelValue, St.Widget)?.get_style()?.includes('#ffd8d1'))
+        if (!optionalInstance(panelValue, St.Widget)?.get_style()?.includes('#ff8873'))
             throw new Error(
                 `The exhausted panel value is not legible: ${optionalInstance(panelValue, St.Widget)?.get_style()}`,
             );

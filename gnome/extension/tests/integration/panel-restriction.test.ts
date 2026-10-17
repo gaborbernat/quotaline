@@ -49,18 +49,19 @@ export async function run() {
         const indicator = getIndicator();
         if (!indicator) throw new Error('Quotaline indicator is missing');
         const panelCells = required(findActor(indicator, actor => actor.has_style_class_name?.('tmb-panel-cells')));
+        const statusCells = () =>
+            panelCells.get_children().filter(actor => actor.has_style_class_name?.('tmb-panel-cell'));
         await waitOrFail(
             () =>
-                panelCells.get_n_children() > 0 &&
-                panelCells
-                    .get_children()
-                    .every(actor => instance(actor, St.Widget).has_style_class_name('tmb-panel-cell-stacked')) &&
+                statusCells().length > 0 &&
+                statusCells().every(actor =>
+                    instance(actor, St.Widget).has_style_class_name('tmb-panel-cell-stacked'),
+                ) &&
                 findActor(
                     panelCells,
                     actor => actor.has_style_class_name?.('tmb-panel-value') && actor.text === 'Limit',
                 ),
-            `Adaptive panel lost the hidden exhausted quota: ${panelCells
-                .get_children()
+            `Adaptive panel lost the hidden exhausted quota: ${statusCells()
                 .map(
                     actor =>
                         `${instance(actor, St.Widget).style_class} ${actor
@@ -97,10 +98,10 @@ export async function run() {
         setSetting('fit_to_space', false);
         await waitOrFail(
             () =>
-                panelCells.get_n_children() === 7 &&
-                panelCells
-                    .get_children()
-                    .every(actor => !instance(actor, St.Widget).has_style_class_name('tmb-panel-cell-stacked')) &&
+                statusCells().length === 7 &&
+                statusCells().every(
+                    actor => !instance(actor, St.Widget).has_style_class_name('tmb-panel-cell-stacked'),
+                ) &&
                 findActor(panelCells, actor => actor.text?.includes('Limit')),
             'Configured panel lost the hidden exhausted quota',
         );
@@ -108,17 +109,15 @@ export async function run() {
         setSetting('format', 'mini-bars');
         await waitOrFail(
             () =>
-                panelCells.get_n_children() === 1 &&
+                statusCells().length === 1 &&
                 findActor(panelCells, actor => actor.has_style_class_name?.('tmb-panel-mini-fill'))?.width === 30,
             'A restricted quota did not fill its mini bar',
         );
         setSetting('format', 'exhausted');
         await waitOrFail(
             () =>
-                panelCells.get_n_children() === 1 &&
-                instance(required(panelCells.get_child_at_index(0)), St.Widget).has_style_class_name(
-                    'tmb-panel-cell-stacked',
-                ) &&
+                statusCells().length === 1 &&
+                instance(required(statusCells()[0]), St.Widget).has_style_class_name('tmb-panel-cell-stacked') &&
                 findActor(
                     panelCells,
                     actor => actor.has_style_class_name?.('tmb-panel-value') && /^2d\dh$/.test(actor.text ?? ''),

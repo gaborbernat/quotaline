@@ -151,8 +151,15 @@ export async function run() {
                 /../g,
             ),
         ).map(channel => parseInt(channel, 16));
-        const background = mode === 'light' ? [189, 189, 191] : [71, 71, 71];
-        const [lighter, darker] = [luminance(background), luminance(color)].sort((left, right) => right - left);
+        const panelCells = instance(
+            required(findActor(indicator, actor => actor.has_style_class_name?.('tmb-panel-cells'))),
+            St.Widget,
+        );
+        const background = panelCells.get_theme_node().get_background_color();
+        const [lighter, darker] = [
+            luminance([background.red, background.green, background.blue]),
+            luminance(color),
+        ].sort((left, right) => right - left);
         const contrast = (required(lighter) + 0.05) / (required(darker) + 0.05);
         if (contrast < 4.5) throw new Error(`${mode} panel value contrast is ${contrast.toFixed(2)}:1`);
         if (mode === 'light') {

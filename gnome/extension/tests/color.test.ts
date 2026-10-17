@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {moduleUrl} from './support/node.ts';
 
-const {usageColor, usageTextColor} = (await import(moduleUrl('color.js'))) as typeof import('../src/color.js');
+const {usageColor, usageStatusColor, usageTextColor} = (await import(
+    moduleUrl('color.js')
+)) as typeof import('../src/color.js');
 function luminance(color: string): number {
     const linear = (offset: number) => {
         const value = parseInt(color.slice(offset, offset + 2), 16) / 255;
@@ -13,9 +15,9 @@ function luminance(color: string): number {
 await test('usage meter palette follows percentage and pace', () => {
     for (const [percent, color] of [
         [0, '#258540'],
-        [30, '#419f2e'],
-        [60, '#f09b4d'],
-        [100, '#e6a993'],
+        [30, '#40a32b'],
+        [60, '#ff9838'],
+        [100, '#ff8873'],
     ] as const)
         assert.equal(usageColor(percent), color);
     assert.equal(usageColor(-5), usageColor(0));
@@ -23,29 +25,36 @@ await test('usage meter palette follows percentage and pace', () => {
     assert.equal(usageColor(20, 'ahead'), usageColor(60));
     assert.equal(usageColor(20, 'exhausted'), usageColor(100));
 });
-await test('panel text palette follows percentage and pace', () => {
+await test('status text palette follows percentage and pace', () => {
     for (const [percent, color] of [
-        [0, '#9ff5b7'],
-        [60, '#ffd7b3'],
-        [100, '#ffd8d1'],
+        [0, '#4dff7e'],
+        [60, '#ff9838'],
+        [100, '#ff8873'],
     ] as const)
-        assert.equal(usageTextColor(percent), color);
-    assert.equal(usageTextColor(20, 'ahead'), usageTextColor(60));
-    assert.equal(usageTextColor(20, 'exhausted'), usageTextColor(100));
+        assert.equal(usageStatusColor(percent), color);
+    assert.equal(usageStatusColor(20, 'ahead'), usageStatusColor(60));
+    assert.equal(usageStatusColor(20, 'exhausted'), usageStatusColor(100));
 });
 await test('high usage meters meet dark tile contrast', () => {
     const darkTile = luminance('#3b3b3e');
     for (let percent = 60; percent <= 100; percent++)
         assert.ok((luminance(usageColor(percent)) + 0.05) / (darkTile + 0.05) >= 4.5, `${percent}%`);
 });
-await test('panel text meets dark and light contrast', () => {
-    const activePanel = luminance('#5e5e61');
-    const lightPanel = luminance('#bdbdbf');
+await test('status and widget text meet their surface contrast', () => {
+    const activePanel = luminance('#303034');
+    const widget = luminance('#494949');
+    const lightPanel = luminance('#e3e3e8');
+    const lightWidget = luminance('#bdbdbf');
     for (let percent = 0; percent <= 100; percent++) {
-        assert.ok((luminance(usageTextColor(percent)) + 0.05) / (activePanel + 0.05) >= 4.5, `${percent}% dark`);
+        assert.ok((luminance(usageStatusColor(percent)) + 0.05) / (activePanel + 0.05) >= 4.5, `${percent}% status`);
+        assert.ok((luminance(usageTextColor(percent)) + 0.05) / (widget + 0.05) >= 4.5, `${percent}% widget`);
         assert.ok(
             (lightPanel + 0.05) / (luminance(usageTextColor(percent, null, true)) + 0.05) >= 4.5,
-            `${percent}% light`,
+            `${percent}% light status`,
+        );
+        assert.ok(
+            (lightWidget + 0.05) / (luminance(usageTextColor(percent, null, true)) + 0.05) >= 4.5,
+            `${percent}% light widget`,
         );
     }
 });

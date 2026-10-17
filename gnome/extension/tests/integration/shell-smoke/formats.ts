@@ -30,6 +30,7 @@ export async function run({
     footer,
     usageColor,
 }: Pick<SmokeContext, 'demoPhase' | 'root' | 'adjustment' | 'panelCells' | 'indicator' | 'footer' | 'usageColor'>) {
+    const statusCells = () => panelCells.get_children().filter(actor => actor.has_style_class_name?.('tmb-panel-cell'));
     if (demoPhase === 'formats') {
         required(required(required(root.get_children()[0]).get_children()[1]).get_children()[2]).emit('clicked', 1);
         await waitOrFail(
@@ -56,16 +57,16 @@ export async function run({
         await setSetting('selected_windows', ['claude:weekly', 'codex:session']);
         await waitOrFail(
             () =>
-                panelCells.get_n_children() === 2 &&
-                panelCells
-                    .get_children()
-                    .every(actor => !instance(actor, St.Widget).has_style_class_name('tmb-panel-cell-stacked')),
+                statusCells().length === 2 &&
+                statusCells().every(
+                    actor => !instance(actor, St.Widget).has_style_class_name('tmb-panel-cell-stacked'),
+                ),
             'Two selected limits did not use the configured inline format',
         );
         await capture('menubar-inline');
         await capture('menubar-two-cells');
         await setSetting('has_custom_selection', false);
-        await waitOrFail(() => panelCells.get_n_children() >= 6, 'Default menu bar selection was not restored');
+        await waitOrFail(() => statusCells().length >= 6, 'Default menu bar selection was not restored');
         await setSetting('format', 'countdown');
         const current = serviceState();
         const candidates = statusVariants(current.cells, current.settings, current.status_provider_indices);
@@ -79,16 +80,14 @@ export async function run({
         await waitOrFail(
             () =>
                 serviceSettings().format === 'countdown' &&
-                panelCells.get_n_children() >= 6 &&
-                panelCells
-                    .get_children()
-                    .every(actor => instance(actor, St.Widget).has_style_class_name('tmb-panel-cell-stacked')) &&
-                panelCells
-                    .get_children()
+                statusCells().length >= 6 &&
+                statusCells().every(actor =>
+                    instance(actor, St.Widget).has_style_class_name('tmb-panel-cell-stacked'),
+                ) &&
+                statusCells()
                     .map(actor => required(actor.get_children()[0]).text)
                     .join('|') === expectedLabels.join('|'),
-            `Constrained menu bar lost provider limits: ${panelCells
-                .get_children()
+            `Constrained menu bar lost provider limits: ${statusCells()
                 .map(cell =>
                     cell
                         .get_children()
@@ -102,7 +101,7 @@ export async function run({
         await waitOrFail(
             () =>
                 serviceSettings().format === 'inline' &&
-                panelCells.get_n_children() >= 6 &&
+                statusCells().length >= 6 &&
                 findActor(
                     page,
                     actor =>
@@ -436,7 +435,7 @@ export async function run({
             () =>
                 !serviceSettings().has_custom_selection &&
                 serviceSettings().selected_windows.length === claudeWindows.length &&
-                panelCells.get_n_children() >= 6,
+                statusCells().length >= 6,
             'Default model selection did not return',
         );
         await waitOrFail(() => {
@@ -509,15 +508,12 @@ export async function run({
         await waitOrFail(
             () =>
                 serviceSettings().format === 'mini-bars' &&
-                panelCells.get_n_children() === 2 &&
-                panelCells
-                    .get_children()
-                    .every(actor => instance(actor, St.Widget).has_style_class_name('tmb-panel-mini')),
+                statusCells().length === 2 &&
+                statusCells().every(actor => instance(actor, St.Widget).has_style_class_name('tmb-panel-mini')),
             'Mini bars format did not group limits by provider',
         );
         const claudeBars = required(
-            panelCells
-                .get_children()
+            statusCells()
                 .find(actor => accessibleName(actor)?.startsWith('Claude:'))
                 ?.get_children()[1],
         ).get_children();
@@ -555,21 +551,19 @@ export async function run({
         ]);
         await waitOrFail(
             () =>
-                panelCells
-                    .get_children()
-                    .some(
-                        actor =>
-                            accessibleName(actor)?.startsWith('Claude:') &&
-                            instance(actor.get_children()[1], St.Widget).has_style_class_name('tmb-panel-mini-dense'),
-                    ),
+                statusCells().some(
+                    actor =>
+                        accessibleName(actor)?.startsWith('Claude:') &&
+                        instance(actor.get_children()[1], St.Widget).has_style_class_name('tmb-panel-mini-dense'),
+                ),
             'Three Claude limits did not use dense mini bars',
         );
         await capture('menubar-mini-bars-dense');
         await setSetting('selected_windows', ['copilot:premium_interactions']);
         await waitOrFail(
             () =>
-                panelCells.get_n_children() === 1 &&
-                accessibleName(required(panelCells.get_child_at_index(0)))?.startsWith('GitHub Copilot:') &&
+                statusCells().length === 1 &&
+                accessibleName(required(statusCells()[0]))?.startsWith('GitHub Copilot:') &&
                 findActor(panelCells, actor => actor.has_style_class_name?.('tmb-panel-mini-fill'))?.width ===
                     Math.max(2, Math.round((30 * Math.clamp(required(serviceState().cells[0]).used, 0, 100)) / 100)),
             'Copilot usage did not fill its grouped mini bar proportionally',
@@ -581,9 +575,7 @@ export async function run({
                 serviceSettings().format === 'exhausted' &&
                 indicator.accessible_name.includes('CX 5h') &&
                 serviceState().cells.every(cell => cell.text.includes('\n')) &&
-                panelCells
-                    .get_children()
-                    .every(actor => instance(actor, St.Widget).has_style_class_name('tmb-panel-cell-stacked')),
+                statusCells().every(actor => instance(actor, St.Widget).has_style_class_name('tmb-panel-cell-stacked')),
             'At 100% format did not reach the panel',
         );
         await capture('menubar-at-100');
@@ -628,8 +620,8 @@ export async function run({
         await waitOrFail(
             () =>
                 /^\d+%/.test(indicator.accessible_name) &&
-                required(panelCells.get_children()[0]).get_children().length === 1 &&
-                instance(required(panelCells.get_children()[0]).get_children()[0], St.Widget).has_style_class_name(
+                required(statusCells()[0]).get_children().length === 1 &&
+                instance(required(statusCells()[0]).get_children()[0], St.Widget).has_style_class_name(
                     'tmb-panel-value',
                 ),
             'A percentage-only template did not render as one colored value',

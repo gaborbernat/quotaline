@@ -15,13 +15,18 @@ interface Palette {
 const usagePalette = {
     bar: {
         green: {hue: 0.38, saturation: 0.72, brightness: 0.52},
-        orange: {hue: 0.08, saturation: 0.68, brightness: 0.94},
-        red: {hue: 0.045, saturation: 0.36, brightness: 0.9},
+        orange: {hue: 0.08, saturation: 0.78, brightness: 1},
+        red: {hue: 0.025, saturation: 0.55, brightness: 1},
     },
     dark_text: {
-        green: {hue: 0.38, saturation: 0.35, brightness: 0.96},
-        orange: {hue: 0.08, saturation: 0.3, brightness: 1},
-        red: {hue: 0.025, saturation: 0.18, brightness: 1},
+        green: {hue: 0.38, saturation: 0.7, brightness: 1},
+        orange: {hue: 0.08, saturation: 0.64, brightness: 1},
+        red: {hue: 0.025, saturation: 0.38, brightness: 1},
+    },
+    status_text: {
+        green: {hue: 0.38, saturation: 0.7, brightness: 1},
+        orange: {hue: 0.08, saturation: 0.78, brightness: 1},
+        red: {hue: 0.025, saturation: 0.55, brightness: 1},
     },
     light_text: {
         green: {hue: 0.401, saturation: 0.671, brightness: 0.24},
@@ -37,6 +42,10 @@ export function usageColor(percent: number, pace: PaceStatus | null = null): str
 
 export function usageTextColor(percent: number, pace: PaceStatus | null = null, light = false): string {
     return colorFor(percent, pace, light ? usagePalette.light_text : usagePalette.dark_text);
+}
+
+export function usageStatusColor(percent: number, pace: PaceStatus | null = null, light = false): string {
+    return colorFor(percent, pace, light ? usagePalette.light_text : usagePalette.status_text);
 }
 
 function colorFor(percent: number, pace: PaceStatus | null, {green, orange, red}: Palette): string {

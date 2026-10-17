@@ -184,6 +184,8 @@ async function runScenario() {
         const monitor = required(Main.layoutManager.primaryMonitor);
         const originalWidth = monitor.width;
         const panelCells = required(findActor(indicator, actor => actor.has_style_class_name?.('tmb-panel-cells')));
+        const statusCells = () =>
+            panelCells.get_children().filter(actor => actor.has_style_class_name?.('tmb-panel-cell'));
         try {
             monitor.width = 900;
             Main.layoutManager.emit('monitors-changed');
@@ -191,19 +193,17 @@ async function runScenario() {
                 () =>
                     root.width >= 280 &&
                     root.width <= Math.min(880, monitor.width - 32) &&
-                    panelCells.get_n_children() === 6 &&
+                    statusCells().length === 6 &&
                     panelCells.get_preferred_width(-1)[1] <= Math.floor(monitor.width * 0.35) &&
                     findActor(root, actor => actor.has_style_class_name?.('tmb-settings-section')),
-                () =>
-                    `Resized monitor kept a ${root.width}px Settings menu and ${panelCells.get_n_children()} panel cells`,
+                () => `Resized monitor kept a ${root.width}px Settings menu and ${statusCells().length} panel cells`,
             );
         } finally {
             monitor.width = originalWidth;
             Main.layoutManager.emit('monitors-changed');
             await waitFor(
-                () => root.width >= 790 && panelCells.get_n_children() > 0,
-                () =>
-                    `Restored monitor kept a ${root.width}px Settings menu and ${panelCells.get_n_children()} panel cells`,
+                () => root.width >= 790 && statusCells().length > 0,
+                () => `Restored monitor kept a ${root.width}px Settings menu and ${statusCells().length} panel cells`,
             );
         }
         try {

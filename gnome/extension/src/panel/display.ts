@@ -2,7 +2,7 @@ import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import {usageColor, usageTextColor} from '../color.js';
+import {usageColor, usageStatusColor} from '../color.js';
 import {menuWidth} from '../menu-geometry.js';
 import type {PanelMonitor, TokenPanel} from '../panel.js';
 import type {MiniBarGroup, StatusCell, StatusTier} from '../service-state.js';
@@ -23,7 +23,7 @@ export const displayMethods = {
             ? this._light
                 ? '#4b4b4b'
                 : '#d8d8da'
-            : usageTextColor(cell.restricted ? 100 : cell.used, null, this._light);
+            : usageStatusColor(cell.restricted ? 100 : cell.used, null, this._light);
         for (const [position, line] of lines.entries()) {
             if (stacked) {
                 const text = position
@@ -106,14 +106,18 @@ export const displayMethods = {
         if (signature !== this._panelSignature) {
             const budget = Math.max(120, Math.floor(this._monitorWidth * 0.35));
             const measure = (items: PanelCell[]) =>
-                items.map(cell => {
+                items.map((cell, index) => {
+                    if (index)
+                        this._panelCells.add_child(
+                            new St.Widget({style_class: 'tmb-panel-separator', y_align: Clutter.ActorAlign.CENTER}),
+                        );
                     const actor = this._panelCell(cell);
                     this._panelCells.add_child(actor);
-                    return {cell, actor, width: actor.get_preferred_width(-1)[1]};
+                    return {cell, actor};
                 });
-            const totalWidth = (entries: {width: number}[]) => entries.reduce((sum, entry) => sum + entry.width, 0);
+            const totalWidth = () => this._panelCells.get_preferred_width(-1)[1];
             let tier: StatusTier = 'icon';
-            let entries: {cell: PanelCell; actor: St.BoxLayout; width: number}[] = [];
+            let entries: {cell: PanelCell; actor: St.BoxLayout}[] = [];
             if (state)
                 for (const candidate of state.status_variants) {
                     clear(this._panelCells);
@@ -123,14 +127,11 @@ export const displayMethods = {
                             : candidate.cells;
                     entries = measure(items);
                     tier = candidate.tier;
-                    if (!state.settings.fit_to_space || totalWidth(entries) <= budget) break;
+                    if (!state.settings.fit_to_space || totalWidth() <= budget) break;
                 }
             this._panelIcon.visible = entries.length === 0;
             if (!entries.length && !cells.length) this._panelCells.add_child(label(COPY.appName, 'tmb-panel-label'));
-            this._logDiagnostic(
-                'status',
-                `tier=${tier} width=${totalWidth(entries)} budget=${budget} cells=${cells.length}`,
-            );
+            this._logDiagnostic('status', `tier=${tier} width=${totalWidth()} budget=${budget} cells=${cells.length}`);
             this._panelSignature = signature;
         }
         this._indicator.accessible_name = cells.length

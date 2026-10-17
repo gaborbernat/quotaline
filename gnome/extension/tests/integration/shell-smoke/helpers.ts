@@ -225,5 +225,6 @@ export interface SmokeContext {
     openWithFastClock: () => void;
     press: (symbol: number, control?: boolean) => Promise<void>;
     usageColor: typeof import('../../../src/color.js').usageColor;
+    usageStatusColor: typeof import('../../../src/color.js').usageStatusColor;
     usageTextColor: typeof import('../../../src/color.js').usageTextColor;
 }

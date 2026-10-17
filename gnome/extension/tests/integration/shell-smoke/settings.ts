@@ -69,7 +69,7 @@ export async function run({
         ).emit('clicked', 1);
         await waitOrFail(
             () =>
-                adjustment.value > 0 &&
+                (adjustment.upper <= adjustment.page_size || adjustment.value > 0) &&
                 findActor(
                     root,
                     actor =>

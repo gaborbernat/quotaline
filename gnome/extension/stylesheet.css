@@ -1,12 +1,12 @@
-.tmb-panel-cells { spacing: 4px; background-color: #303034; border-radius: 6px; }
-.tmb-light .tmb-panel-cells { background-color: #e3e3e8; }
-.tmb-panel-cell { spacing: 0; padding: 1px 1px; }
+.tmb-panel-button { background-color: transparent; border-radius: 0; box-shadow: none; }
+.tmb-panel-cells { spacing: 4px; }
+.tmb-panel-cell { spacing: 0; padding: 1px 3px; }
 .tmb-panel-separator { width: 1px; height: 20px; background-color: #a4a4ac; }
 .tmb-light .tmb-panel-separator { background-color: #55555c; }
 .tmb-panel-cell-stacked { spacing: 0; }
-.tmb-panel-line { font-size: 8pt; text-align: center; }
+.tmb-panel-line { font-size: 8pt; font-weight: normal; text-align: center; }
 .tmb-panel-inline { font-size: 8pt; }
-.tmb-panel-value { font-weight: bold; }
+.tmb-panel-value { font-weight: 500; }
 .tmb-panel-cell-stacked .tmb-panel-value { font-size: 10pt; }
 .tmb-panel-label { font-size: 9pt; padding-left: 4px; }
 .tmb-panel-mini { spacing: 4px; }
@@ -33,19 +33,20 @@
 
 .tmb-root { spacing: 0; }
 .tmb-root-narrow .tmb-header { padding: 4px 8px; }
-.tmb-root-narrow .tmb-tab { width: 88px; font-size: 9pt; }
+.tmb-root-narrow .tmb-tab { font-size: 9pt; }
 .tmb-root-narrow .tmb-tab-content { spacing: 4px; }
 .tmb-root-compact-header .tmb-header-info { width: 165px; }
 .tmb-root-narrow .tmb-page { padding: 8px 12px 12px; }
 .tmb-root-narrow .tmb-footer { padding: 7px 8px; }
 .tmb-root-narrow .tmb-history-label { min-width: 44px; }
 .tmb-root-narrow .tmb-metric-picker { min-width: 0; }
-.tmb-header { padding: 4px 16px; border-bottom: 1px solid rgba(128,128,128,0.20); }
+.tmb-header { padding: 4px 12px; border-bottom: 1px solid rgba(128,128,128,0.20); }
 .tmb-header-info { width: 165px; spacing: 7px; }
 .tmb-header-heading { spacing: 1px; }
 .tmb-header-updated, .tmb-header-activity { font-size: 8pt; opacity: 0.68; }
+.tmb-demo-badge { padding: 3px 8px; border: 1px solid rgba(128,128,128,0.24); border-radius: 7px; background-color: rgba(128,128,128,0.15); font-weight: 500; opacity: 1; }
 .tmb-tabs { spacing: 0; border: 1px solid rgba(128,128,128,0.38); border-radius: 8px; }
-.tmb-tab { width: 92px; padding: 3px 0; font-size: 10pt; text-align: center; }
+.tmb-tab { width: 88.33px; padding: 3px 0; font-size: 10pt; text-align: center; }
 .tmb-tab-content { spacing: 5px; }
 .tmb-tab:hover { background-color: rgba(128,128,128,0.16); }
 .tmb-tab-selected, .tmb-tab-selected:hover { background-color: rgba(160,160,160,0.42); color: white; font-weight: bold; border-radius: 6px; }

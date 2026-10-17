@@ -151,11 +151,7 @@ export async function run() {
                 /../g,
             ),
         ).map(channel => parseInt(channel, 16));
-        const panelCells = instance(
-            required(findActor(indicator, actor => actor.has_style_class_name?.('tmb-panel-cells'))),
-            St.Widget,
-        );
-        const background = panelCells.get_theme_node().get_background_color();
+        const background = Main.panel.get_theme_node().get_background_color();
         const [lighter, darker] = [
             luminance([background.red, background.green, background.blue]),
             luminance(color),

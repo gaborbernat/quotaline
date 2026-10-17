@@ -116,9 +116,9 @@ func popoverExportsUseRetinaResolutionWithoutChangingLayout(dark: Bool) throws {
 
 @Test(arguments: [
   (CGSize(width: 880, height: 640), 640.0),
-  (CGSize(width: 400, height: 1200), 760.0),
+  (CGSize(width: 400, height: 1200), 1200.0),
   (CGSize.zero, 760.0),
-]) @MainActor func popoverExportKeepsWidthAndCapsTheMeasuredHeight(measured: CGSize, expectedHeight: Double) {
+]) @MainActor func popoverExportKeepsWidthAndMeasuredHeight(measured: CGSize, expectedHeight: Double) {
   let fallback = CGSize(width: 880, height: 760)
 
   #expect(

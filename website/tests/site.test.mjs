@@ -41,7 +41,9 @@ test('site builds with versioned links and platform guides', context => {
         for (const tab of ['usage', 'history', 'settings']) {
             assert.match(guide, new RegExp(`id=gallery-tab-${platform}-${tab}`));
             assert.match(guide, new RegExp(`id=gallery-panel-${platform}-${tab}`));
-            assert.match(guide, new RegExp(`id=gallery-panel-${platform}-${tab}[^<]*><img[^>]*width=880 height=760`));
+            const image = guide.match(new RegExp(`id=gallery-panel-${platform}-${tab}[^<]*><img[^>]*width=880 height=(\\d+)`));
+            assert.ok(image);
+            assert.ok(Number(image[1]) > 760, `${platform} ${tab} should show the full tab`);
         }
     }
 });

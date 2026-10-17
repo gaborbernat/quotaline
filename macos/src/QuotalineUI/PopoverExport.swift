@@ -6,8 +6,7 @@ import SwiftUI
 /// and whatever sits behind it, so the export hosts the same view offscreen and keeps the content alone.
 @MainActor
 public enum PopoverExporter {
-  /// Renders a view offscreen at the size the popover would give it, so the shot shows what a viewer would see
-  /// rather than the whole scrolled content unrolled.
+  /// Renders the native view offscreen at the requested size.
   public static func image(_ view: some View, dark: Bool, size: CGSize? = nil) -> NSImage? {
     image(NSHostingView(rootView: view), dark: dark, size: size)
   }

@@ -190,6 +190,8 @@ export const displayMethods = {
     _updateHeader(this: TokenPanel): void {
         this._headerUpdated.text = this._timePresentation?.header_updated ?? 'Updated never';
         this._headerActivity.text = this._timePresentation?.header_activity ?? '';
+        if (this._state?.settings.demo) this._headerActivity.add_style_class_name('tmb-demo-badge');
+        else this._headerActivity.remove_style_class_name('tmb-demo-badge');
         for (const {actor, id} of this._providerStatusLabels)
             actor.text = this._timePresentation?.provider_statuses[id] as string;
         if (this._ageClock) {

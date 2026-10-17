@@ -130,7 +130,7 @@ public enum ExportRunner {
           onMeasure: { measurement in
             if measurement.tab == tab { measured.value = measurement.size }
           })
-        // Measurement arrives on the next run-loop turn; retain the live viewport cap in the final capture.
+        // Measurement arrives on the next run-loop turn after the viewport has laid out its content.
         let hosting = view.makeNativeView()
         hosting.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         hosting.frame = CGRect(origin: .zero, size: shotSize)
@@ -147,7 +147,7 @@ public enum ExportRunner {
     return written
   }
 
-  /// A laptop-sized viewport, with overflow scrolling inside the tab.
+  /// A laptop-sized viewport for measuring the tab's full content.
   static var shotSize: CGSize {
     let screen = CGRect(x: 0, y: 0, width: 1512, height: 944)
     let anchor = CGRect(x: screen.midX, y: screen.maxY - 24, width: 40, height: 24)
@@ -159,7 +159,7 @@ public enum ExportRunner {
   static func exportSize(measured: CGSize, fallback: CGSize) -> CGSize {
     CGSize(
       width: fallback.width,
-      height: measured.height > 0 ? min(measured.height, fallback.height) : fallback.height)
+      height: measured.height > 0 ? measured.height : fallback.height)
   }
 }
 

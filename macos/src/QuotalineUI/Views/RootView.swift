@@ -80,8 +80,12 @@ public struct RootView: View {
         }
         if environment.isDemo {
           Text(SharedCopy.demoData)
-            .font(.caption)
+            .font(.system(size: 10, weight: .medium))
             .semanticForeground(.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 7))
+            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Color.primary.opacity(0.12)))
             .accessibilityIdentifier("usage-demo-badge")
         }
       }

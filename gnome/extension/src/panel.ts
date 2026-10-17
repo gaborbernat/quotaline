@@ -333,6 +333,7 @@ export class TokenPanel {
         this._cancel = new Gio.Cancellable();
         this._tooltip = new Tooltip();
         this._indicator = new PanelMenu.Button(0.5, COPY.appName, false) as Indicator;
+        this._indicator.add_style_class_name('tmb-panel-button');
         const panel = box(false, 'panel-status-menu-box');
         const appIcon = new Gio.FileIcon({
             file: Gio.File.new_for_path(GLib.build_filenamev([this.path, 'icons', 'quotaline-symbolic.svg'])),
@@ -422,9 +423,10 @@ export class TokenPanel {
         this._headerBalance = box();
         this._headerBalance.width = 165;
         this._headerActivity = label('', 'tmb-header-activity');
-        this._headerActivity.x_expand = true;
+        this._headerBalance.add_child(new St.Widget({x_expand: true}));
         this._headerActivity.x_align = Clutter.ActorAlign.END;
         this._headerBalance.add_child(this._headerActivity);
+        rightGap.add_child(new St.Widget({x_expand: true}));
         rightGap.add_child(this._headerBalance);
         header.add_child(rightGap);
         this._root.add_child(header);

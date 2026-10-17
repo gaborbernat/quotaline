@@ -12,8 +12,9 @@ just macos-shots
 
 The script rebuilds the app, then runs `--export-menubar` and `--export-popover` with isolated demo state, disabled
 network transport and mock credentials. It waits for History data before drawing. The eight WebP assets cover the menu
-bar and three tabs in both appearances, bounded to a laptop-sized viewport. Commit them with UI changes that affect the
-documented screens; website CI builds those assets but does not regenerate them.
+bar and three tabs in both appearances. Each tab export expands to its measured content height, while the live panel
+still scrolls on smaller screens. Commit the assets with UI changes that affect the documented screens; website CI
+builds them but does not regenerate them.
 
 Use `APP_BINARY=/absolute/path/to/Quotaline just macos-shots` only to capture a binary you have verified matches the
 source. Compare Settings > About's source version with the binary you intend to document. Inspect the full images for
@@ -45,12 +46,12 @@ several scroll positions, menu bar formats, Quick Settings sizes and narrow moni
 `-menu.png` crops for comparison with macOS. The website's GNOME images come from these unscaled menu crops; review the
 raw output before converting it to WebP.
 
-The three menu crops are 880 × 760 logical pixels on both platforms. macOS exports at 2× (1760 × 1520 pixels); GNOME
-Shell captures at 1× (880 × 760 pixels). The status strips are 520 logical pixels wide. macOS draws a 28-pixel menu bar
-at 3×; GNOME Shell captures its 32-pixel top bar at 1×. Compare them at logical size, not at raw pixel size. The
-`menubar-comparison.png` capture selects Claude session, weekly, Fable and Sonnet, then Codex session and weekly, in
-provider order, matching the macOS export. Both History captures use 30 days with daily buckets. Usage percentages and
-reset times depend on the capture clock.
+The tab captures are 880 logical pixels wide and expand vertically to show their full content. macOS exports at 2×;
+GNOME Shell captures at 1× on a tall isolated display. The status strips are 520 logical pixels wide. macOS draws a
+28-pixel menu bar at 3×; GNOME Shell captures its 32-pixel top bar at 1×, with the menu closed and the button unhovered.
+Compare them at logical size, not raw pixel size. The `menubar-comparison.png` capture selects Claude session, weekly,
+Fable and Sonnet, then Codex session and weekly, in provider order, matching the macOS export. Both History captures use
+30 days with daily buckets. Usage percentages and reset times depend on the capture clock.
 
 Use the filename to find a specific state:
 

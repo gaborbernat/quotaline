@@ -230,8 +230,8 @@ export async function run() {
                 findActor(indicator.menu.box, actor => actor.has_style_class_name?.('tmb-legend-toggle')),
         );
         await waitFor(
-            () => widthSettled(indicator, 890),
-            () => `History width ${widthDetails(indicator, 890)}`,
+            () => widthSettled(indicator, 880),
+            () => `History width ${widthDetails(indicator, 880)}`,
         );
         await waitFor(() => {
             const chart = required(findActor(indicator.menu.box, actor => actor.has_style_class_name?.('tmb-chart')));
@@ -242,8 +242,8 @@ export async function run() {
             return (
                 chart.has_allocation() &&
                 legend.has_allocation() &&
-                (root.width >= 888
-                    ? chart.width >= 600 &&
+                (root.width >= 875
+                    ? chart.width >= 580 &&
                       legend.get_transformed_position()[0] >= chart.get_transformed_position()[0] + chart.width
                     : chart.width >= root.width - 50 &&
                       legend.get_transformed_position()[1] >= chart.get_transformed_position()[1] + chart.height)

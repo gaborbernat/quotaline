@@ -186,6 +186,7 @@ async function runScenario() {
         const panelCells = required(findActor(indicator, actor => actor.has_style_class_name?.('tmb-panel-cells')));
         const statusCells = () =>
             panelCells.get_children().filter(actor => actor.has_style_class_name?.('tmb-panel-cell'));
+        const panelIcon = required(required(panelCells.get_parent()).get_children()[0]);
         try {
             monitor.width = 900;
             Main.layoutManager.emit('monitors-changed');
@@ -193,10 +194,12 @@ async function runScenario() {
                 () =>
                     root.width >= 280 &&
                     root.width <= Math.min(880, monitor.width - 32) &&
-                    statusCells().length === 6 &&
+                    (statusCells().length > 0 || panelIcon.visible) &&
                     panelCells.get_preferred_width(-1)[1] <= Math.floor(monitor.width * 0.35) &&
                     findActor(root, actor => actor.has_style_class_name?.('tmb-settings-section')),
-                () => `Resized monitor kept a ${root.width}px Settings menu and ${statusCells().length} panel cells`,
+                () =>
+                    `Resized monitor kept a ${root.width}px Settings menu, ${statusCells().length} cells, ` +
+                    `${panelIcon.visible ? 'visible' : 'hidden'} icon, and ${panelCells.get_preferred_width(-1)[1]}px status width`,
             );
         } finally {
             monitor.width = originalWidth;

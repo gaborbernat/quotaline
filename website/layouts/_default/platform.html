@@ -14,30 +14,45 @@
           {{ if $platform.gallery }}
             <div class="platform-gallery" data-gallery>
               <div class="platform-gallery-menu">
-                {{ range $variant := $platform.variants }}
-                  {{ $path := printf $platform.cardImage $variant }}
-                  {{ with resources.Get $path }}
+                {{ if $platform.variants }}
+                  {{ range $variant := $platform.variants }}
+                    {{ $path := printf $platform.cardImage $variant }}
+                    {{ with resources.Get $path }}
+                      {{ partial "shot-image.html" (dict "image" . "scale" $platform.cardScale "alt" $platform.cardAlt
+                           "class" (printf "shot shot-bar only-%s" $variant)) }}
+                    {{ else }}{{ errorf "Missing platform image %s" $path }}{{ end }}
+                  {{ end }}
+                {{ else }}
+                  {{ with resources.Get $platform.cardImage }}
                     {{ partial "shot-image.html" (dict "image" . "scale" $platform.cardScale "alt" $platform.cardAlt
-                         "class" (printf "shot shot-bar only-%s" $variant)) }}
-                  {{ else }}{{ errorf "Missing platform image %s" $path }}{{ end }}
+                         "class" "shot shot-bar") }}
+                  {{ else }}{{ errorf "Missing platform image %s" $platform.cardImage }}{{ end }}
                 {{ end }}
               </div>
-              <div class="platform-gallery-tabs" role="tablist" aria-label="macOS screenshot">
+              <div class="platform-gallery-tabs" role="tablist" aria-label="{{ $platform.name }} screenshot">
                 {{ range $index, $tab := $platform.gallery }}
-                  <button type="button" role="tab" id="gallery-tab-{{ lower $tab }}"
-                    aria-controls="gallery-panel-{{ lower $tab }}" aria-selected="{{ eq $index 0 }}"
+                  <button type="button" role="tab" id="gallery-tab-{{ $platform.id }}-{{ lower $tab }}"
+                    aria-controls="gallery-panel-{{ $platform.id }}-{{ lower $tab }}" aria-selected="{{ eq $index 0 }}"
                     tabindex="{{ if eq $index 0 }}0{{ else }}-1{{ end }}">{{ $tab }}</button>
                 {{ end }}
               </div>
               {{ range $index, $tab := $platform.gallery }}
-                <div class="platform-gallery-panel" role="tabpanel" id="gallery-panel-{{ lower $tab }}"
-                  aria-labelledby="gallery-tab-{{ lower $tab }}"{{ if $index }} hidden{{ end }}>
-                  {{ range $variant := $platform.variants }}
-                    {{ $path := printf "images/popover-%s-%s.webp" (lower $tab) $variant }}
+                <div class="platform-gallery-panel" role="tabpanel" id="gallery-panel-{{ $platform.id }}-{{ lower $tab }}"
+                  aria-labelledby="gallery-tab-{{ $platform.id }}-{{ lower $tab }}"{{ if $index }} hidden{{ end }}>
+                  {{ if $platform.variants }}
+                    {{ range $variant := $platform.variants }}
+                      {{ $path := printf $platform.galleryImage (lower $tab) $variant }}
+                      {{ with resources.Get $path }}
+                        {{ partial "shot-image.html" (dict "image" . "scale" $platform.overviewScale
+                             "alt" (printf "Quotaline %s %s panel" $platform.name $tab) "loading" "lazy"
+                             "class" (printf "shot only-%s" $variant)) }}
+                      {{ else }}{{ errorf "Missing platform image %s" $path }}{{ end }}
+                    {{ end }}
+                  {{ else }}
+                    {{ $path := printf $platform.galleryImage (lower $tab) }}
                     {{ with resources.Get $path }}
                       {{ partial "shot-image.html" (dict "image" . "scale" $platform.overviewScale
-                           "alt" (printf "Quotaline macOS %s panel" $tab) "loading" "lazy"
-                           "class" (printf "shot only-%s" $variant)) }}
+                           "alt" (printf "Quotaline %s %s panel" $platform.name $tab) "loading" "lazy" "class" "shot") }}
                     {{ else }}{{ errorf "Missing platform image %s" $path }}{{ end }}
                   {{ end }}
                 </div>

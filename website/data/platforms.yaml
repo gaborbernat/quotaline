@@ -21,6 +21,7 @@
   overviewAlt: Quotaline macOS Usage panel
   overviewScale: 2
   gallery: [Usage, History, Settings]
+  galleryImage: images/popover-%s-%s.webp
 
 - id: gnome
   name: GNOME
@@ -43,3 +44,5 @@
   overviewImage: images/gnome-usage.webp
   overviewAlt: Quotaline GNOME Shell Usage menu
   overviewScale: 1
+  gallery: [Usage, History, Settings]
+  galleryImage: images/gnome-%s.webp

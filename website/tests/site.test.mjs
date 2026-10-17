@@ -36,6 +36,13 @@ test('site builds with versioned links and platform guides', context => {
     for (const file of ['llms.txt', 'reference/providers/index.md', 'gnome/index.html', 'macos/index.html']) {
         assert.ok(fs.statSync(path.join(destination, file)).size > 0);
     }
+    for (const platform of ['macos', 'gnome']) {
+        const guide = fs.readFileSync(path.join(destination, platform, 'index.html'), 'utf8');
+        for (const tab of ['usage', 'history', 'settings']) {
+            assert.match(guide, new RegExp(`id=gallery-tab-${platform}-${tab}`));
+            assert.match(guide, new RegExp(`id=gallery-panel-${platform}-${tab}`));
+        }
+    }
 });
 
 test('a frontend entry adds navigation and install cards', context => {

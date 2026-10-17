@@ -19,7 +19,6 @@ public struct UsageTab: View {
     ScrollingTab(tab: .usage) {
       let presentation = environment.usagePresentation
       VStack(alignment: .leading, spacing: 8) {
-        header(presentation)
         if let card = environment.firstRunCard {
           FirstRunCardView(environment: environment, card: card)
         }
@@ -48,27 +47,6 @@ public struct UsageTab: View {
     .background(SpendSummaryActivity(environment: environment, spend: spend))
   }
 
-  private func header(_ presentation: UsagePresentation) -> some View {
-    HStack(spacing: 8) {
-      AppIconView(size: 22, tone: presentation.iconTone)
-        .accessibilityHidden(true)
-      VStack(alignment: .leading, spacing: 1) {
-        Text(environment.appInfo.name).font(.headline)
-        UsageUpdatedText(lastRefresh: presentation.lastRefresh, environment: environment)
-      }
-      .accessibilityElement(children: .combine)
-      if environment.isDemo {
-        Text(SharedCopy.demoData)
-          .font(.caption)
-          .semanticForeground(.secondary)
-          .accessibilityIdentifier("usage-demo-badge")
-      }
-      Spacer(minLength: 8)
-      if presentation.isRefreshing {
-        ProgressView().progressViewStyle(RingProgressViewStyle()).accessibilityLabel("Refreshing")
-      }
-    }
-  }
 }
 
 private struct SpendSummaryActivity: View {
@@ -144,22 +122,5 @@ struct FirstRunCardView: View {
   func dismiss() {
     environment.settings.firstRunCardDismissed = true
     environment.firstRunCard = nil
-  }
-}
-
-private struct UsageUpdatedText: View {
-  let lastRefresh: Date?
-  @Bindable var environment: UIEnvironment
-
-  var body: some View {
-    Text("Updated \(UsageDeadline.age(lastRefresh).text(at: environment.usageDeadlineNow))")
-      .font(.callout)
-      .semanticForeground(.secondary)
-      .fixedSize(horizontal: false, vertical: true)
-      .richHelp(
-        TooltipContent(
-          title: "Last refresh",
-          body: "Shows when the latest provider refresh finished. Individual cards identify stale or cached values."
-        ))
   }
 }

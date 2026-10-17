@@ -3,7 +3,7 @@ import GLib from 'gi://GLib';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {usageColor, usageStatusColor} from '../color.js';
-import {menuWidth} from '../menu-geometry.js';
+import {menuWidth, statusBudget} from '../menu-geometry.js';
 import type {PanelMonitor, TokenPanel} from '../panel.js';
 import type {MiniBarGroup, StatusCell, StatusTier} from '../service-state.js';
 import {COPY} from '../shared-copy.js';
@@ -14,11 +14,12 @@ import {box, button, clear, coloredLabel, label, meter, percent} from './support
 type PanelCell = (StatusCell & {bars?: undefined}) | MiniBarGroup;
 
 export const displayMethods = {
-    _panelCell(this: TokenPanel, cell: PanelCell): St.BoxLayout {
+    _panelCell(this: TokenPanel, cell: PanelCell): St.Widget {
         if (cell.bars) return this._miniBarCell(cell);
         const lines = cell.text.split('\n').filter(Boolean);
         const stacked = lines.length > 1;
-        const item = box(stacked, `tmb-panel-cell${stacked ? ' tmb-panel-cell-stacked' : ''}`);
+        const styleClass = `tmb-panel-cell${stacked ? ' tmb-panel-cell-stacked' : ''}`;
+        const item = stacked ? verticalPanelBox(styleClass) : box(false, styleClass);
         const color = cell.stale
             ? this._light
                 ? '#4b4b4b'
@@ -65,7 +66,7 @@ export const displayMethods = {
         const icon = this._providerIcon(group.provider);
         icon.icon_size = 12;
         item.add_child(icon);
-        const rows = box(true, 'tmb-panel-mini-rows');
+        const rows = verticalPanelBox('tmb-panel-mini-rows');
         if (group.bars.length > 2) rows.add_style_class_name('tmb-panel-mini-dense');
         for (const cell of group.bars) {
             const row = box(false, 'tmb-panel-mini-row');
@@ -104,7 +105,19 @@ export const displayMethods = {
             cells.map(cell => [cell.id, cell.text, cell.used, cell.restricted, cell.limited, cell.stale]),
         ]);
         if (signature !== this._panelSignature) {
-            const budget = Math.max(120, Math.floor(this._monitorWidth * 0.35));
+            const container = this._indicator.container;
+            const box = container.get_parent() as Clutter.Actor;
+            const panel = box.get_parent() as Clutter.Actor;
+            const occupiedWidth =
+                box
+                    .get_children()
+                    .filter(actor => actor !== container && actor.visible)
+                    .reduce((width, actor) => width + actor.get_preferred_width(-1)[1], 0) +
+                panel
+                    .get_children()
+                    .filter(actor => actor !== box && actor.visible)
+                    .reduce((width, actor) => width + actor.get_preferred_width(-1)[1], 0);
+            const budget = statusBudget(this._monitorWidth, occupiedWidth);
             const measure = (items: PanelCell[]) =>
                 items.map((cell, index) => {
                     if (index)
@@ -117,7 +130,7 @@ export const displayMethods = {
                 });
             const totalWidth = () => this._panelCells.get_preferred_width(-1)[1];
             let tier: StatusTier = 'icon';
-            let entries: {cell: PanelCell; actor: St.BoxLayout}[] = [];
+            let entries: {cell: PanelCell; actor: St.Widget}[] = [];
             if (state)
                 for (const candidate of state.status_variants) {
                     clear(this._panelCells);
@@ -352,5 +365,12 @@ export const displayMethods = {
         if (tab === 'History') this._loadHistory();
     },
 };
+
+function verticalPanelBox(styleClass: string): St.Widget {
+    return new St.Widget({
+        layout_manager: new Clutter.BoxLayout({orientation: Clutter.Orientation.VERTICAL}),
+        style_class: styleClass,
+    });
+}
 
 export type DisplayMethods = typeof displayMethods;

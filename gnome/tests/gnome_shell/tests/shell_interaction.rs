@@ -244,6 +244,54 @@ fn centered_medium_history_stacks_two_legend_columns() {
 
 #[cfg(feature = "fixture-api")]
 #[test]
+fn provider_status_yields_to_other_panel_items() {
+    let _shell = shell_lock();
+    let fixture = isolated_service(&serde_json::json!({"demo":true}));
+    run_shell_script(
+        &fixture,
+        "extension/tests/integration/panel-alignment.test.js",
+        &[("TMB_PANEL_SPACE", "1")],
+    );
+}
+
+#[cfg(feature = "fixture-api")]
+#[test]
+fn provider_status_yields_to_another_panel_group() {
+    let _shell = shell_lock();
+    let fixture = isolated_service(&serde_json::json!({"demo":true}));
+    run_shell_script(
+        &fixture,
+        "extension/tests/integration/panel-alignment.test.js",
+        &[("TMB_PANEL_SPACE", "1"), ("TMB_PANEL_PEER", "1")],
+    );
+}
+
+#[cfg(feature = "fixture-api")]
+#[test]
+fn stacked_status_survives_panel_layout_reset() {
+    let _shell = shell_lock();
+    let fixture = isolated_service(&serde_json::json!({"demo":true}));
+    run_shell_script(
+        &fixture,
+        "extension/tests/integration/panel-restriction.test.js",
+        &[("TMB_PANEL_ORIENTATION", "1")],
+    );
+}
+
+#[cfg(feature = "fixture-api")]
+#[test]
+fn mini_bars_survive_panel_layout_reset() {
+    let _shell = shell_lock();
+    let fixture = isolated_service(&serde_json::json!({"demo":true}));
+    run_shell_script(
+        &fixture,
+        "extension/tests/integration/panel-restriction.test.js",
+        &[("TMB_PANEL_ORIENTATION", "1"), ("TMB_PANEL_MINI", "1")],
+    );
+}
+
+#[cfg(feature = "fixture-api")]
+#[test]
 fn disabled_provider_with_cached_usage_stays_in_settings() {
     let _shell = shell_lock();
     let fixture = isolated_service(&serde_json::json!({"demo":true,"providers":{

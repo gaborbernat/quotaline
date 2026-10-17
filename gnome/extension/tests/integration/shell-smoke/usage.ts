@@ -56,11 +56,13 @@ export async function run({
     );
     if (scrollbar.opacity !== 0) throw new Error('Idle Usage scrollbar remains visible');
     const scrollAdjustment = scroll.get_vadjustment();
-    scrollAdjustment.value = Math.min(scrollAdjustment.upper - scrollAdjustment.page_size, 30);
-    await waitOrFail(() => scrollbar.opacity === 255, 'Usage scrollbar did not appear while scrolling');
-    await waitOrFail(() => scrollbar.opacity === 0, 'Usage scrollbar did not hide after scrolling');
-    scrollAdjustment.value = 0;
-    await waitOrFail(() => scrollbar.opacity === 0, 'Usage scrollbar did not hide after returning to the top');
+    if (scrollAdjustment.upper > scrollAdjustment.page_size) {
+        scrollAdjustment.value = Math.min(scrollAdjustment.upper - scrollAdjustment.page_size, 30);
+        await waitOrFail(() => scrollbar.opacity === 255, 'Usage scrollbar did not appear while scrolling');
+        await waitOrFail(() => scrollbar.opacity === 0, 'Usage scrollbar did not hide after scrolling');
+        scrollAdjustment.value = 0;
+        await waitOrFail(() => scrollbar.opacity === 0, 'Usage scrollbar did not hide after returning to the top');
+    }
     if (GLib.getenv('TMB_EXPECT_DEMO') === '1') {
         await changedAfter(() => {
             required(findActor(footer, actor => buttonLabel(actor)?.includes('Refresh'))).emit('clicked', 1);

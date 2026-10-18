@@ -21,16 +21,25 @@ jobs:
     name: Tag the release
     if: github.repository == 'quotaline/quotaline'
     runs-on: ubuntu-26.04
-    timeout-minutes: 5
+    timeout-minutes: 120
+    environment: release-auth
     permissions:
-      contents: write
-    outputs:
-      version: ${{ steps.version.outputs.next }}
+      contents: read
+      actions: write
     steps:
+      - id: token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          persist-credentials: true
+          token: ${{ steps.token.outputs.token }}
+          persist-credentials: true # zizmor: ignore[artipacked] this job pushes main and its tag
       - name: Work out the version
         id: version
         env:
@@ -60,16 +69,67 @@ jobs:
           fi
           echo "next=$next" >> "$GITHUB_OUTPUT"
           echo "Releasing $next"
-      - name: Push the tag
+      - name: Commit release notes
         env:
           NEXT: ${{ steps.version.outputs.next }}
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          APP_SLUG: ${{ steps.token.outputs.app-slug }}
         run: |
+          set -euo pipefail
           if git rev-parse "v$NEXT" >/dev/null 2>&1; then
             echo "::error::v$NEXT already exists"
             exit 1
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mapfile -d '' fragments < <(find changelog.d -maxdepth 1 -type f -name '*.md' -print0 | sort -z)
+          if (( ${#fragments[@]} > 0 )); then
+            for fragment in "${fragments[@]}"; do
+              if [[ ! "$fragment" =~ ^changelog\.d/[0-9]+\.(feature|bugfix|doc)\.md$ || ! -s "$fragment" ]]; then
+                echo "::error::invalid or empty news fragment: $fragment"
+                exit 1
+              fi
+            done
+            {
+              printf '# Changelog\n\n## v%s (%s)\n\n' "$NEXT" "$(date -u +%F)"
+              for fragment in "${fragments[@]}"; do
+                cat "$fragment"
+                printf '\n\n'
+              done
+              tail -n +3 CHANGELOG.md
+            } > "$RUNNER_TEMP/changelog.md"
+            mv "$RUNNER_TEMP/changelog.md" CHANGELOG.md
+            git rm -- "${fragments[@]}"
+            app_user_id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
+            git config user.name "${APP_SLUG}[bot]"
+            git config user.email "${app_user_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+            git add CHANGELOG.md changelog.d
+            git commit -m "Prepare v$NEXT"
+            git push origin HEAD:main
+          elif ! grep -Fq "## v$NEXT (" CHANGELOG.md; then
+            echo "::error::no news fragments to release"
+            exit 1
+          fi
+      - name: Require full CI on the release commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse HEAD)
+          gh workflow run ci.yml --ref main
+          for (( attempt=0; attempt<24; attempt++ )); do
+            run_id=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+              -f head_sha="$sha" -f event=workflow_dispatch -f per_page=10 --jq '.workflow_runs[0].id // empty')
+            if [[ -n "$run_id" ]]; then
+              gh run watch "$run_id" --exit-status
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::full CI run did not appear for $sha"
+          exit 1
+      - name: Push the version tag
+        env:
+          NEXT: ${{ steps.version.outputs.next }}
+        run: |
           git tag -a "v$NEXT" -m "Release $NEXT"
           git push origin "v$NEXT"
       - name: Say what happens next
@@ -78,20 +138,3 @@ jobs:
         run: |
           echo "Tagged v$NEXT. Release builds GNOME and macOS downloads, the cask and the App Store upload." \
             >> "$GITHUB_STEP_SUMMARY"
-
-  # A tag pushed with GITHUB_TOKEN starts no workflow of its own, so this dispatches the release instead. Calling it as a
-  # reusable workflow would leave its jobs without the `release` environment's secrets; a dispatched run reads them.
-  release:
-    name: Start the release
-    needs: tag
-    runs-on: ubuntu-26.04
-    timeout-minutes: 5
-    permissions:
-      actions: write
-    steps:
-      - name: Dispatch the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-          TAG: v${{ needs.tag.outputs.version }}
-        run: gh workflow run release.yml --repo "$REPOSITORY" --ref "$TAG" --field tag="$TAG"

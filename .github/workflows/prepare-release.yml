@@ -46,6 +46,8 @@ jobs:
           BUMP: ${{ inputs.bump }}
           EXPLICIT: ${{ inputs.version }}
         run: |
+          git fetch origin main
+          git reset --hard origin/main
           if [ -n "$EXPLICIT" ]; then
             next="${EXPLICIT#v}"
           else
@@ -130,6 +132,11 @@ jobs:
         env:
           NEXT: ${{ steps.version.outputs.next }}
         run: |
+          git fetch origin main
+          if [[ "$(git rev-parse origin/main)" != "$(git rev-parse HEAD)" ]]; then
+            echo "::error::main moved after release CI"
+            exit 1
+          fi
           git tag -a "v$NEXT" -m "Release $NEXT"
           git push origin "v$NEXT"
       - name: Say what happens next

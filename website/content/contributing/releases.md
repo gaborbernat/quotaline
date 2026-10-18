@@ -4,16 +4,18 @@ description: Signing, notarization and distribution through Direct, Homebrew and
 weight: 7
 ---
 
-Run the **Prepare Release** workflow (`just release patch|minor|major`, or the Actions tab). It works out the next
-version from the newest tag, pushes `vX.Y.Z`, and dispatches **Release** for that tag. A tag pushed with the default
-`GITHUB_TOKEN` starts no further workflow, and a called workflow would not receive the `release` environment's secrets,
-so the dispatch is what starts the build. One run of **Release** publishes all three channels:
+Add a nonempty `changelog.d/<PR>.feature.md`, `.bugfix.md`, or `.doc.md` entry for a user-facing pull request. Apply
+`skip news` for changes that need no release note; the label can be added after the pull request opens. Run **Prepare
+Release** (`just release patch|minor|major`, or the Actions tab) after merging the changes. It commits the entries to
+the [changelog](https://github.com/quotaline/quotaline/blob/main/CHANGELOG.md), runs the full CI matrix on that commit,
+and pushes `vX.Y.Z` only after CI passes. The repository-only release App pushes the tag, which starts **Release**. One
+run of **Release** publishes all three channels:
 
 ```mermaid
 flowchart LR
     accTitle: What one tag publishes
-    accDescr: Prepare Release bumps the version, pushes a tag and dispatches the release. The release builds separate Direct, Homebrew, and App Store applications. Direct includes Sparkle, Homebrew omits it, and App Store uses the sandboxed entitlement set.
-    P[Prepare Release<br/>bump, tag, dispatch] --> T((tag vX.Y.Z))
+    accDescr: Prepare Release commits the changelog, verifies full CI and pushes a tag. The release builds separate Direct, Homebrew, and App Store applications. Direct includes Sparkle, Homebrew omits it, and App Store uses the sandboxed entitlement set.
+    P[Prepare Release<br/>changelog, CI, tag] --> T((tag vX.Y.Z))
     T --> D[Direct: Sparkle,<br/>Developer ID]
     T --> H[Homebrew: no Sparkle,<br/>Developer ID]
     T --> A[App Store:<br/>sandboxed upload]
@@ -31,9 +33,9 @@ Every job requires its credentials: the Direct job needs signing credentials and
 keys, and the release stops before any job runs when an App Store certificate or profile is missing, rather than
 publishing two channels of three.
 
-Version 0.1.0 published on 2026-09-16 through the Direct and Homebrew channels. Pipeline configuration is not evidence
-that a later release or an App Store listing exists. Check the repository's releases and full PR CI matrix before
-declaring a build ready.
+Versions 0.1.0 through 0.1.7 were published from the archived macOS repository. Pipeline configuration is not evidence
+that a release from this repository or an App Store listing exists. Check the repository's releases before declaring a
+build ready.
 
 The release runs no application tests of its own. It reads the CI verdict for the tagged commit and refuses to publish
 unless the newest run passed, so a tag carries the full matrix of macOS 15, 26 and 27 rather than the two runtimes a

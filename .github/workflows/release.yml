@@ -222,7 +222,6 @@ jobs:
     defaults:
       run:
         working-directory: macos
-    # This job publishes the release; the cask job opens its branch from a clean main checkout.
     permissions:
       contents: read
     steps:

@@ -12,15 +12,16 @@ behavior change. The other supported categories are `breaking`, `security`, `per
 
 Apply `skip news` to a change with no end-user effect, including tooling-only work. The label can be added after opening
 the PR. Bot PRs receive it automatically unless they add a fragment. A bot-authored fragment is still checked and
-published without bot credit. Run **Prepare Release** (`just release`, or the Actions tab) after merging the changes. It
-derives the next `vX.Y.Z` tag from fragments, commits the changelog, runs full CI on that commit, and pushes the tag
-only after CI passes. `major`, `minor`, or `patch` can override the automatic bump; no version is typed into the form.
+published without bot credit. Run **Prepare Release** (`just macos-release`, or the Actions tab) after merging the
+changes. It derives the next `vX.Y.Z` tag from fragments, commits the changelog, runs full CI on that commit, and pushes
+the tag only after CI passes. `major`, `minor`, or `patch` can override the automatic bump; no version is typed into the
+form.
 
 Quotaline keeps the package version in its Rust manifests and Xcode project. Before preparing a release, keep these
-source versions in sync with the version implied by the fragments. The workflow checks the GNOME manifest before any
-write and stops if it differs. Because this repository has no tags yet, its first release uses the latest tracked
-changelog version, `0.1.7`, as the comparison baseline. The repository-only release App pushes the tag, which starts
-**Release**. One run of **Release** publishes all three channels:
+source versions in sync with the version implied by the fragments. The workflow checks all Rust package versions and
+both Xcode version fields before any write, and stops if they differ. Because this repository has no tags yet, its first
+release uses the latest tracked changelog version, `0.1.7`, as the comparison baseline. The repository-only release App
+pushes the tag, which starts **Release**. One run of **Release** publishes all three channels:
 
 ```mermaid
 flowchart LR

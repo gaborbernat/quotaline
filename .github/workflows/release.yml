@@ -53,6 +53,7 @@ jobs:
     needs: [previous-tag, verify-source]
     runs-on: ubuntu-26.04
     timeout-minutes: 10
+    environment: release
     permissions:
       contents: write
     steps:
@@ -375,6 +376,7 @@ jobs:
     needs: [direct, notes]
     runs-on: ubuntu-26.04
     timeout-minutes: 30
+    environment: release
     permissions:
       contents: write
     steps:

@@ -122,11 +122,16 @@ jobs:
     permissions:
       actions: read
       contents: read
+    outputs:
+      commit: ${{ steps.commit.outputs.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.TAG }}
           persist-credentials: false
+      - name: Record the tagged commit
+        id: commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Match the release tag to the package version
         run: |
           version=$(python3 -c 'import tomllib; from pathlib import Path; print(tomllib.loads(Path("gnome/Cargo.toml").read_text())["package"]["version"])')
@@ -372,7 +377,7 @@ jobs:
           if-no-files-found: error
   publish:
     name: Publish GitHub release
-    needs: [direct, notes]
+    needs: [direct, notes, verify-source]
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     environment: release
@@ -387,25 +392,34 @@ jobs:
         with:
           name: github-release-notes
           path: ${{ runner.temp }}
+      - name: Collect release assets
+        run: |
+          mkdir "$RUNNER_TEMP/release-assets"
+          cp \
+            macos/dist/direct/Quotaline.zip \
+            macos/dist/direct/Quotaline.dmg \
+            macos/dist/direct/Quotaline.zip.sha256 \
+            macos/dist/direct/Quotaline.dmg.sha256 \
+            macos/dist/direct/appcast.xml \
+            macos/dist/homebrew/Quotaline-Homebrew.zip \
+            macos/dist/homebrew/Quotaline-Homebrew.dmg \
+            macos/dist/homebrew/Quotaline-Homebrew.zip.sha256 \
+            macos/dist/homebrew/Quotaline-Homebrew.dmg.sha256 \
+            macos/dist/gnome/quotaline-gnome-linux-x86_64.tar.gz \
+            macos/dist/gnome/quotaline-gnome-linux-x86_64.tar.gz.sha256 \
+            Casks/quotaline.rb \
+            "$RUNNER_TEMP/release-assets/"
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3 # zizmor: ignore[superfluous-actions]
+        uses: tox-dev/github-workflows/publish-github-release@d88002302950ed36200e62673f592acc40e6b151
+        env:
+          GH_TOKEN: ${{ github.token }}
         with:
-          tag_name: ${{ env.TAG }}
-          body_path: ${{ runner.temp }}/release-notes.md
-          fail_on_unmatched_files: true
-          files: |
-            macos/dist/direct/Quotaline.zip
-            macos/dist/direct/Quotaline.dmg
-            macos/dist/direct/Quotaline.zip.sha256
-            macos/dist/direct/Quotaline.dmg.sha256
-            macos/dist/direct/appcast.xml
-            macos/dist/homebrew/Quotaline-Homebrew.zip
-            macos/dist/homebrew/Quotaline-Homebrew.dmg
-            macos/dist/homebrew/Quotaline-Homebrew.zip.sha256
-            macos/dist/homebrew/Quotaline-Homebrew.dmg.sha256
-            macos/dist/gnome/quotaline-gnome-linux-x86_64.tar.gz
-            macos/dist/gnome/quotaline-gnome-linux-x86_64.tar.gz.sha256
-            Casks/quotaline.rb
+          repository: ${{ github.repository }}
+          tag: ${{ env.TAG }}
+          commit: ${{ needs.verify-source.outputs.commit }}
+          title: ${{ env.TAG }}
+          notes-file: ${{ runner.temp }}/release-notes.md
+          assets-directory: ${{ runner.temp }}/release-assets
       - name: Verify the Homebrew asset
         shell: bash
         env:

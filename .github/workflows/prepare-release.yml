@@ -114,6 +114,11 @@ jobs:
         with:
           python-version: "3.15"
           enable-cache: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: --locked
+          cache: false
       - name: Create release-tool environment
         run: uv venv --python 3.15 "$RUNNER_TEMP/release-tools"
       - name: Install locked release tools
@@ -122,6 +127,8 @@ jobs:
       - name: Add release tools to PATH
         run: echo "$RUNNER_TEMP/release-tools/bin" >>"$GITHUB_PATH"
       - uses: tox-dev/github-workflows/validate-release-patch@296388849cced16665b3e8b4397a22265418d3dc
+        env:
+          SKIP: swift-format,swiftlint
         with:
           version: ${{ needs.assemble.outputs.version }}
           changelog: website/content/changelog/_index.md

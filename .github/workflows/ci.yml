@@ -192,7 +192,6 @@ jobs:
       - run: mise exec -- just lint-extension
   validate:
     needs: changes
-    if: ${{ needs.changes.outputs.docs == 'true' || needs.changes.outputs.shared == 'true' || contains(fromJSON('["workflow_dispatch","schedule"]'), github.event_name) }}
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
@@ -776,6 +775,19 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
+      - name: Require change detection
+        env:
+          JOB_RESULT: ${{ needs.changes.result }}
+        run: test "$JOB_RESULT" = success
+      - name: Require workflow and site validation
+        env:
+          JOB_RESULT: ${{ needs.validate.result }}
+        run: test "$JOB_RESULT" = success
+      - name: Require PR news validation
+        if: github.event_name == 'pull_request'
+        env:
+          JOB_RESULT: ${{ needs.news.result }}
+        run: test "$JOB_RESULT" = success
       - name: Require every applicable CI job
         env:
           CI_RESULTS: ${{ toJSON(needs) }}

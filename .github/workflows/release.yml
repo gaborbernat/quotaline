@@ -102,7 +102,7 @@ jobs:
         with:
           name: generated-notes
           path: ${{ runner.temp }}
-      - uses: tox-dev/github-workflows/render-release-notes@89e630c458473dce8432704f50ac18f61dcc33f4
+      - uses: tox-dev/github-workflows/render-release-notes@8db87d4730353b61630d66cbc592d6bed0c85d2b
         with:
           tag: ${{ env.TAG }}
           changelog: website/content/changelog/_index.md
@@ -164,8 +164,8 @@ jobs:
         run: macos/Scripts/check-commit-verdict.sh "$TAG"
 
   preflight:
-    name: Require release credentials
-    needs: [notes, verify-source]
+    name: Require App Store credentials
+    needs: verify-source
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     environment: release
@@ -173,7 +173,7 @@ jobs:
     outputs:
       app_store: ${{ steps.check.outputs.app_store }}
     steps:
-      # A job cannot read secrets in its own `if`. Check App Store credentials before publishing starts.
+      # A job cannot read secrets in its own `if`. Check App Store credentials before its upload starts.
       - name: Require the App Store credentials
         id: check
         env:
@@ -197,7 +197,7 @@ jobs:
           echo "app_store=true" >> "$GITHUB_OUTPUT"
   gnome:
     name: GNOME download
-    needs: preflight
+    needs: verify-source
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
@@ -229,7 +229,7 @@ jobs:
           if-no-files-found: error
   direct:
     name: Direct and Homebrew downloads
-    needs: [preflight, gnome]
+    needs: gnome
     runs-on: macos-26
     timeout-minutes: 90
     environment: release
@@ -419,7 +419,7 @@ jobs:
             Casks/quotaline.rb \
             "$RUNNER_TEMP/release-assets/"
       - name: Publish GitHub release
-        uses: tox-dev/github-workflows/publish-github-release@d88002302950ed36200e62673f592acc40e6b151
+        uses: tox-dev/github-workflows/publish-github-release@8db87d4730353b61630d66cbc592d6bed0c85d2b
         env:
           GH_TOKEN: ${{ github.token }}
         with:
@@ -487,7 +487,7 @@ jobs:
           fi
   app-store:
     name: Mac App Store upload
-    needs: [preflight, publish]
+    needs: preflight
     runs-on: macos-26
     timeout-minutes: 90
     environment: release

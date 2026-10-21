@@ -39,7 +39,21 @@ jobs:
           uv pip sync --preview-features pylock --python "$RUNNER_TEMP/release-tools/bin/python" --group release pylock.toml
       - name: Add release tools to PATH
         run: echo "$RUNNER_TEMP/release-tools/bin" >>"$GITHUB_PATH"
-      - uses: tox-dev/github-workflows/validate-news@89e630c458473dce8432704f50ac18f61dcc33f4
+      - uses: tox-dev/github-workflows/validate-news@8db87d4730353b61630d66cbc592d6bed0c85d2b
+  hook-update-cooldown:
+    name: Hook update cooldown
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: tox-dev/github-workflows/check-hook-update-cooldown@8db87d4730353b61630d66cbc592d6bed0c85d2b
+        with:
+          repository: ${{ github.repository }}
+          pull-request: ${{ github.event.pull_request.number }}
+          head-sha: ${{ github.event.pull_request.head.sha }}
   changes:
     runs-on: ubuntu-26.04
     timeout-minutes: 5
@@ -754,6 +768,7 @@ jobs:
     if: ${{ always() }}
     needs:
       - news
+      - hook-update-cooldown
       - changes
       - macos-runtimes
       - crates-coverage
@@ -788,6 +803,11 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           JOB_RESULT: ${{ needs.news.result }}
+        run: test "$JOB_RESULT" = success
+      - name: Require hook update cooldown
+        if: github.event_name == 'pull_request'
+        env:
+          JOB_RESULT: ${{ needs.hook-update-cooldown.result }}
         run: test "$JOB_RESULT" = success
       - name: Require every applicable CI job
         env:

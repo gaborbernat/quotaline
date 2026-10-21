@@ -36,7 +36,7 @@ flowchart LR
     D --> G
     H --> G
     G --> C[Cask PR:<br/>version and sha256]
-    G --> A[App Store:<br/>sandboxed upload]
+    T --> A[App Store:<br/>sandboxed upload]
     classDef start fill:#efeafe,stroke:#5a46e8,color:#0f1117;
     classDef build fill:#faf3dc,stroke:#cbb46a,color:#0f1117;
     classDef ship fill:#e6f2f7,stroke:#7fb3c6,color:#0f1117;
@@ -49,9 +49,9 @@ The cask job opens a pull request with the new version and checksum after the Gi
 updates `main`. GitHub publication verifies the tag's commit, exact notes, and SHA256 digest of all 12 expected assets.
 A failed asset upload leaves a draft for retry; a retry rejects changed notes or assets.
 
-The Direct job needs signing credentials and [Sparkle](https://sparkle-project.org) keys. Preflight checks for an App
-Store certificate and profiles before any publishing job starts. A build or upload can still fail after another channel
-has published; inspect every release job before treating the release as complete.
+The Direct job needs signing credentials and [Sparkle](https://sparkle-project.org) keys. The App Store credential check
+runs only on the App Store path. Its upload can finish before Apple processes the build; it does not delay the GitHub
+Release or cask PR. Inspect both paths before treating the release as complete.
 
 Versions 0.1.0 through 0.1.7 were published from the archived macOS repository. The new repository has no tags or GitHub
 Releases for those versions. The first release here must be checked against the GNOME download, macOS downloads, cask

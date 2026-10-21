@@ -80,7 +80,7 @@ jobs:
                   raise SystemExit(f"::error::macos/App/project.yml needs {field}: {expected}")
           PY
       - id: prepare
-        uses: tox-dev/github-workflows/prepare-towncrier@89e630c458473dce8432704f50ac18f61dcc33f4
+        uses: tox-dev/github-workflows/prepare-towncrier@8db87d4730353b61630d66cbc592d6bed0c85d2b
         env:
           SKIP: swift-format,swiftlint
         with:
@@ -129,7 +129,7 @@ jobs:
           uv pip sync --preview-features pylock --python "$RUNNER_TEMP/release-tools/bin/python" --group release pylock.toml
       - name: Add release tools to PATH
         run: echo "$RUNNER_TEMP/release-tools/bin" >>"$GITHUB_PATH"
-      - uses: tox-dev/github-workflows/validate-release-patch@89e630c458473dce8432704f50ac18f61dcc33f4
+      - uses: tox-dev/github-workflows/validate-release-patch@8db87d4730353b61630d66cbc592d6bed0c85d2b
         env:
           SKIP: swift-format,swiftlint
         with:
@@ -160,7 +160,7 @@ jobs:
         with:
           name: release-patch
           path: ${{ runner.temp }}/release-patch
-      - uses: tox-dev/github-workflows/validate-release-patch@89e630c458473dce8432704f50ac18f61dcc33f4
+      - uses: tox-dev/github-workflows/validate-release-patch@8db87d4730353b61630d66cbc592d6bed0c85d2b
         with:
           version: ${{ needs.assemble.outputs.version }}
           changelog: website/content/changelog/_index.md

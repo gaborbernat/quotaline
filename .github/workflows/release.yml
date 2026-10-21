@@ -16,13 +16,15 @@ concurrency:
 env:
   TAG: ${{ inputs.tag || github.ref_name }}
 jobs:
-  notes:
-    name: Render GitHub Release notes
+  previous-tag:
+    name: Find preceding tag
     if: github.repository == 'quotaline/quotaline'
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
-      contents: write
+      contents: read
+    outputs:
+      tag: ${{ steps.previous.outputs.tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -46,10 +48,18 @@ jobs:
           set -o pipefail
           previous=$(git tag --list | release-creator tags "$TAG" --previous)
           echo "tag=$previous" >>"$GITHUB_OUTPUT"
+  contributor-metadata:
+    name: Generate contributor metadata
+    needs: [previous-tag, verify-source]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
       - name: Read GitHub contributor metadata
         env:
           GH_TOKEN: ${{ github.token }}
-          PREVIOUS: ${{ steps.previous.outputs.tag }}
+          PREVIOUS: ${{ needs.previous-tag.outputs.tag }}
         run: |
           args=(-f "tag_name=$TAG")
           if [[ -n "$PREVIOUS" ]]; then
@@ -57,6 +67,38 @@ jobs:
           fi
           gh api -X POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" "${args[@]}" --jq .body \
             >"$RUNNER_TEMP/generated-notes.md"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: generated-notes
+          path: ${{ runner.temp }}/generated-notes.md
+          if-no-files-found: error
+  notes:
+    name: Render GitHub Release notes
+    needs: contributor-metadata
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.15"
+          enable-cache: false
+      - name: Create release-tool environment
+        run: uv venv --python 3.15 "$RUNNER_TEMP/release-tools"
+      - name: Install locked release tools
+        run: >-
+          uv pip sync --preview-features pylock --python "$RUNNER_TEMP/release-tools/bin/python" --group release pylock.toml
+      - name: Add release tools to PATH
+        run: echo "$RUNNER_TEMP/release-tools/bin" >>"$GITHUB_PATH"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: generated-notes
+          path: ${{ runner.temp }}
       - uses: tox-dev/github-workflows/render-release-notes@89e630c458473dce8432704f50ac18f61dcc33f4
         with:
           tag: ${{ env.TAG }}
@@ -116,9 +158,7 @@ jobs:
     outputs:
       app_store: ${{ steps.check.outputs.app_store }}
     steps:
-      # A job cannot read secrets in its own `if`, so the release works out here which legs it can publish.
-      # A tag that reaches only two of the three channels is a half-published release, so a missing credential stops
-      # the run here rather than leaving the App Store behind without anyone noticing.
+      # A job cannot read secrets in its own `if`. Check App Store credentials before publishing starts.
       - name: Require the App Store credentials
         id: check
         env:
@@ -174,7 +214,7 @@ jobs:
           if-no-files-found: error
   direct:
     name: Direct and Homebrew downloads
-    needs: [preflight, gnome, notes]
+    needs: [preflight, gnome]
     runs-on: macos-26
     timeout-minutes: 90
     environment: release
@@ -183,7 +223,7 @@ jobs:
         working-directory: macos
     # This job publishes the release; the cask job opens its branch from a clean main checkout.
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -329,16 +369,29 @@ jobs:
             macos/dist/gnome/*.tar.gz
             macos/dist/gnome/*.sha256
             Casks/quotaline.rb
+          if-no-files-found: error
+  publish:
+    name: Publish GitHub release
+    needs: [direct, notes]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: downloads
+          path: .
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: github-release-notes
           path: ${{ runner.temp }}
       - name: Publish GitHub release
-        # the action uploads the assets and writes the notes in one step
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3 # zizmor: ignore[superfluous-actions]
         with:
           tag_name: ${{ env.TAG }}
           body_path: ${{ runner.temp }}/release-notes.md
+          fail_on_unmatched_files: true
           files: |
             macos/dist/direct/Quotaline.zip
             macos/dist/direct/Quotaline.dmg
@@ -359,7 +412,7 @@ jobs:
         run: gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx 'Quotaline-Homebrew.dmg'
   cask:
     name: Open the Homebrew cask update
-    needs: direct
+    needs: publish
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     environment: release-auth
@@ -415,7 +468,7 @@ jobs:
           fi
   app-store:
     name: Mac App Store upload
-    needs: [preflight, direct]
+    needs: [preflight, publish]
     runs-on: macos-26
     timeout-minutes: 90
     environment: release

@@ -26,7 +26,7 @@ pushes the tag, which starts **Release**. One run publishes the GNOME download a
 ```mermaid
 flowchart LR
     accTitle: What one tag publishes
-    accDescr: Prepare Release commits the changelog, verifies full CI and pushes a tag. The release packages GNOME and builds separate Direct, Homebrew, and App Store applications. Direct includes Sparkle, Homebrew omits it, and App Store uses the sandboxed entitlement set.
+    accDescr: A tested tag builds a GNOME download and separate Direct, Homebrew, and App Store macOS applications.
     P[Prepare Release<br/>changelog, CI, tag] --> T((tag vX.Y.Z))
     T --> N[GNOME:<br/>binary and extension]
     T --> D[Direct: Sparkle,<br/>Developer ID]
@@ -47,8 +47,9 @@ flowchart LR
 The cask job opens a pull request with the new version and checksum after the GitHub Release exists. Merging that PR
 updates `main`.
 
-The Direct job needs signing credentials and [Sparkle](https://sparkle-project.org) keys. Preflight stops the publishing
-jobs if an App Store certificate or profile is missing, so a tag cannot publish only two of the three macOS channels.
+The Direct job needs signing credentials and [Sparkle](https://sparkle-project.org) keys. Preflight checks for an App
+Store certificate and profiles before any publishing job starts. A build or upload can still fail after another channel
+has published; inspect every release job before treating the release as complete.
 
 Versions 0.1.0 through 0.1.7 were published from the archived macOS repository. The new repository has no tags or GitHub
 Releases for those versions. The first release here must be checked against the GNOME download, macOS downloads, cask

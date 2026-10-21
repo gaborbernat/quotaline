@@ -21,7 +21,8 @@ Quotaline keeps the package version in its Rust manifests and Xcode project. Bef
 source versions in sync with the version implied by the fragments. The workflow checks all Rust package versions and
 both Xcode version fields before any write, and stops if they differ. Because this repository has no tags yet, its first
 release uses the latest tracked changelog version, `0.1.7`, as the comparison baseline. The repository-only release App
-pushes the tag, which starts **Release**. One run publishes the GNOME download and all three macOS channels:
+pushes the tag, which starts **Release**. Before signing, that workflow verifies the requested tag exists and points to
+the checked-out commit. One run publishes the GNOME download and all three macOS channels:
 
 ```mermaid
 flowchart LR
@@ -29,13 +30,13 @@ flowchart LR
     accDescr: A tested tag builds a GNOME download and separate Direct, Homebrew, and App Store macOS applications.
     P[Prepare Release<br/>changelog, CI, tag] --> T((tag vX.Y.Z))
     T --> N[GNOME:<br/>binary and extension]
-    T --> D[Direct: Sparkle,<br/>Developer ID]
-    T --> H[Homebrew: no Sparkle,<br/>Developer ID]
-    T --> A[App Store:<br/>sandboxed upload]
+    N --> D[Direct: Sparkle,<br/>Developer ID]
+    D --> H[Homebrew: no Sparkle,<br/>Developer ID]
     N --> G[GitHub release:<br/>GNOME and macOS downloads]
     D --> G
     H --> G
-    H --> C[Cask PR:<br/>version and sha256]
+    G --> C[Cask PR:<br/>version and sha256]
+    G --> A[App Store:<br/>sandboxed upload]
     classDef start fill:#efeafe,stroke:#5a46e8,color:#0f1117;
     classDef build fill:#faf3dc,stroke:#cbb46a,color:#0f1117;
     classDef ship fill:#e6f2f7,stroke:#7fb3c6,color:#0f1117;
@@ -45,7 +46,8 @@ flowchart LR
 ```
 
 The cask job opens a pull request with the new version and checksum after the GitHub Release exists. Merging that PR
-updates `main`.
+updates `main`. GitHub publication verifies the tag's commit, exact notes, and SHA256 digest of all 12 expected assets.
+A failed asset upload leaves a draft for retry; a retry rejects changed notes or assets.
 
 The Direct job needs signing credentials and [Sparkle](https://sparkle-project.org) keys. Preflight checks for an App
 Store certificate and profiles before any publishing job starts. A build or upload can still fail after another channel

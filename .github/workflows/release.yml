@@ -129,9 +129,16 @@ jobs:
         with:
           ref: ${{ env.TAG }}
           persist-credentials: false
-      - name: Record the tagged commit
+      - name: Verify and record the tagged commit
         id: commit
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        run: |
+          git fetch --no-tags --depth=1 origin "refs/tags/$TAG"
+          commit="$(git rev-parse 'FETCH_HEAD^{commit}')"
+          if [[ "$commit" != "$(git rev-parse HEAD)" ]]; then
+            echo "::error::$TAG does not point to the checked-out commit"
+            exit 1
+          fi
+          echo "sha=$commit" >> "$GITHUB_OUTPUT"
       - name: Match the release tag to the package version
         run: |
           version=$(python3 -c 'import tomllib; from pathlib import Path; print(tomllib.loads(Path("gnome/Cargo.toml").read_text())["package"]["version"])')

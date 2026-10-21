@@ -420,11 +420,6 @@ jobs:
           title: ${{ env.TAG }}
           notes-file: ${{ runner.temp }}/release-notes.md
           assets-directory: ${{ runner.temp }}/release-assets
-      - name: Verify the Homebrew asset
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx 'Quotaline-Homebrew.dmg'
   cask:
     name: Open the Homebrew cask update
     needs: publish

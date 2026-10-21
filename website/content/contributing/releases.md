@@ -21,38 +21,43 @@ Quotaline keeps the package version in its Rust manifests and Xcode project. Bef
 source versions in sync with the version implied by the fragments. The workflow checks all Rust package versions and
 both Xcode version fields before any write, and stops if they differ. Because this repository has no tags yet, its first
 release uses the latest tracked changelog version, `0.1.7`, as the comparison baseline. The repository-only release App
-pushes the tag, which starts **Release**. One run of **Release** publishes all three channels:
+pushes the tag, which starts **Release**. One run publishes the GNOME download and all three macOS channels:
 
 ```mermaid
 flowchart LR
     accTitle: What one tag publishes
-    accDescr: Prepare Release commits the changelog, verifies full CI and pushes a tag. The release builds separate Direct, Homebrew, and App Store applications. Direct includes Sparkle, Homebrew omits it, and App Store uses the sandboxed entitlement set.
+    accDescr: Prepare Release commits the changelog, verifies full CI and pushes a tag. The release packages GNOME and builds separate Direct, Homebrew, and App Store applications. Direct includes Sparkle, Homebrew omits it, and App Store uses the sandboxed entitlement set.
     P[Prepare Release<br/>changelog, CI, tag] --> T((tag vX.Y.Z))
+    T --> N[GNOME:<br/>binary and extension]
     T --> D[Direct: Sparkle,<br/>Developer ID]
     T --> H[Homebrew: no Sparkle,<br/>Developer ID]
     T --> A[App Store:<br/>sandboxed upload]
-    D --> G[GitHub release:<br/>zip, DMG, checksums, appcast]
-    H --> C[Homebrew cask:<br/>version and sha256 on main]
+    N --> G[GitHub release:<br/>GNOME and macOS downloads]
+    D --> G
+    H --> G
+    H --> C[Cask PR:<br/>version and sha256]
     classDef start fill:#efeafe,stroke:#5a46e8,color:#0f1117;
     classDef build fill:#faf3dc,stroke:#cbb46a,color:#0f1117;
     classDef ship fill:#e6f2f7,stroke:#7fb3c6,color:#0f1117;
     class P,T start;
-    class D,H build;
+    class N,D,H build;
     class G,C,A ship;
 ```
 
-Every job requires its credentials: the Direct job needs signing credentials and [Sparkle](https://sparkle-project.org)
-keys, and the release stops before any job runs when an App Store certificate or profile is missing, rather than
-publishing two channels of three.
+The cask job opens a pull request with the new version and checksum after the GitHub Release exists. Merging that PR
+updates `main`.
+
+The Direct job needs signing credentials and [Sparkle](https://sparkle-project.org) keys. Preflight stops the publishing
+jobs if an App Store certificate or profile is missing, so a tag cannot publish only two of the three macOS channels.
 
 Versions 0.1.0 through 0.1.7 were published from the archived macOS repository. The new repository has no tags or GitHub
 Releases for those versions. The first release here must be checked against the GNOME download, macOS downloads, cask
 PR, and App Store upload before considering the new pipeline complete.
 
 The release runs no application tests of its own. It reads the CI verdict for the tagged commit and refuses to publish
-unless the newest run passed, so a tag carries the full matrix of macOS 15, 26 and 27 rather than the two runtimes a
-release once repeated. Everything the release still checks concerns the artifact instead of behaviour: deployment
-targets, both architecture slices, Mach-O validity, updater load commands, notarization and the appcast signature.
+unless the newest run passed, so a tag carries the full matrix for macOS 15 and 26, plus macOS 27 when its runner image
+is available. Everything the release still checks concerns the artifact instead of behaviour: deployment targets, both
+architecture slices, Mach-O validity, updater load commands, notarization and the appcast signature.
 
 The three channels are separate Xcode application targets. Only Direct compiles and links `SparkleUpdater`; Homebrew and
 App Store do not link the Sparkle product and carry no Sparkle keys in `Info.plist`. Release verification checks both
@@ -84,5 +89,5 @@ The app record in [App Store Connect](https://appstoreconnect.apple.com) has to 
 before the first upload, along with a `tech.bernat.quotaline` App ID and an app group for the widget.
 
 [Renovate](https://docs.renovatebot.com) opens a grouped pull request each week for the pinned tools, the action digests
-and the Swift packages. Read the Docs publishes the site using `.readthedocs.yaml`; the Website workflow validates a
-build. Preview and versioned URLs include a base path, so internal links must use Hugo page URLs.
+and the Swift packages. Read the Docs publishes the site using `.readthedocs.yaml`; CI validates the site build. Preview
+and versioned URLs include a base path, so internal links must use Hugo page URLs.

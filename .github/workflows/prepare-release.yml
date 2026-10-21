@@ -43,7 +43,7 @@ jobs:
         run: >-
           uv pip sync --preview-features pylock --python "$RUNNER_TEMP/release-tools/bin/python" --group release pylock.toml
       - name: Add release tools to PATH
-        run: echo "$RUNNER_TEMP/release-tools/bin" >>"$GITHUB_PATH"
+        run: echo "$RUNNER_TEMP/release-tools/bin" >> "$GITHUB_PATH"
       - name: Select version from fragments
         id: version
         env:
@@ -57,12 +57,12 @@ jobs:
             test -n "$previous"
             version=$(printf '%s\n' "$previous" | release-creator tags --next "$BUMP" --prefix v)
           fi
-          printf 'version=%s\n' "$version" >>"$GITHUB_OUTPUT"
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
       - name: Match source version
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          python - <<'PY'
+          python - << 'PY'
           import os
           import tomllib
           from pathlib import Path
@@ -128,7 +128,7 @@ jobs:
         run: >-
           uv pip sync --preview-features pylock --python "$RUNNER_TEMP/release-tools/bin/python" --group release pylock.toml
       - name: Add release tools to PATH
-        run: echo "$RUNNER_TEMP/release-tools/bin" >>"$GITHUB_PATH"
+        run: echo "$RUNNER_TEMP/release-tools/bin" >> "$GITHUB_PATH"
       - uses: tox-dev/github-workflows/validate-release-patch@8db87d4730353b61630d66cbc592d6bed0c85d2b
         env:
           SKIP: swift-format,swiftlint
@@ -142,7 +142,7 @@ jobs:
         id: digest
         run: |
           read -r patch_sha _ < <(sha256sum "$RUNNER_TEMP/release-patch/release.patch")
-          echo "sha=$patch_sha" >>"$GITHUB_OUTPUT"
+          echo "sha=$patch_sha" >> "$GITHUB_OUTPUT"
   push:
     needs: [assemble, validate]
     runs-on: ubuntu-26.04
@@ -205,7 +205,7 @@ jobs:
         run: |
           set -euo pipefail
           sha=$(git rev-parse HEAD)
-          for (( attempt=0; attempt<24; attempt++ )); do
+          for ((attempt = 0; attempt < 24; attempt++)); do
             run_id=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
               -f head_sha="$sha" -f event=workflow_dispatch -f per_page=10 --jq '.workflow_runs[0].id // empty')
             if [[ -n "$run_id" ]]; then

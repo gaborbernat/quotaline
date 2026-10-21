@@ -84,6 +84,7 @@ repos:
         entry: mise exec -- just biome
         language: system
         files: ^(biome\.json|gnome/(package\.json|tsconfig(\.node)?\.json|eslint\.config\.mjs|extension/.*\.(ts|js|mjs|json))|website/assets/.*\.(css|js))$
+        pass_filenames: false
       - id: eslint
         name: eslint (TypeScript and GJS)
         entry: mise exec -- just eslint

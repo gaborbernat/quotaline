@@ -1,5 +1,4 @@
 name: Release
-
 on:
   push:
     tags: ["v*"]
@@ -8,33 +7,78 @@ on:
       tag:
         description: Existing tag to build (v1.2.3)
         required: true
-
 permissions:
   contents: read
-
 concurrency:
   group: release
   cancel-in-progress: false
   queue: max
-
 env:
   TAG: ${{ inputs.tag || github.ref_name }}
-
 jobs:
-  preflight:
-    name: Which legs can run
-    # Only this repository holds the signing identities; a fork that runs the workflow gets nothing to leak.
+  notes:
+    name: Render GitHub Release notes
     if: github.repository == 'quotaline/quotaline'
     runs-on: ubuntu-26.04
-    timeout-minutes: 5
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.15"
+          enable-cache: false
+      - name: Create release-tool environment
+        run: uv venv --python 3.15 "$RUNNER_TEMP/release-tools"
+      - name: Install locked release tools
+        run: >-
+          uv pip sync --preview-features pylock --python "$RUNNER_TEMP/release-tools/bin/python" --group release pylock.toml
+      - name: Add release tools to PATH
+        run: echo "$RUNNER_TEMP/release-tools/bin" >>"$GITHUB_PATH"
+      - name: Find preceding tag
+        id: previous
+        run: |
+          set -o pipefail
+          previous=$(git tag --list | release-creator tags "$TAG" --previous)
+          echo "tag=$previous" >>"$GITHUB_OUTPUT"
+      - name: Read GitHub contributor metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS: ${{ steps.previous.outputs.tag }}
+        run: |
+          args=(-f "tag_name=$TAG")
+          if [[ -n "$PREVIOUS" ]]; then
+            args+=(-f "previous_tag_name=$PREVIOUS")
+          fi
+          gh api -X POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" "${args[@]}" --jq .body \
+            >"$RUNNER_TEMP/generated-notes.md"
+      - uses: tox-dev/github-workflows/render-release-notes@296388849cced16665b3e8b4397a22265418d3dc
+        with:
+          tag: ${{ env.TAG }}
+          changelog: website/content/changelog/_index.md
+          repository: ${{ github.repository }}
+          artifact-url: https://github.com/${{ github.repository }}/releases/tag/${{ env.TAG }}
+          artifact-label: Downloads
+          generated-notes: ${{ runner.temp }}/generated-notes.md
+          output: ${{ runner.temp }}/release-notes.md
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: github-release-notes
+          path: ${{ runner.temp }}/release-notes.md
+          if-no-files-found: error
+  verify-source:
+    name: Verify tagged source
+    if: github.repository == 'quotaline/quotaline'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
     permissions:
       actions: read
       contents: read
-    # The signing secrets live in this environment, so every job that touches them names it and inherits its
-    # protection rules.
-    environment: release
-    outputs:
-      app_store: ${{ steps.check.outputs.app_store }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,16 +86,36 @@ jobs:
           persist-credentials: false
       - name: Match the release tag to the package version
         run: |
-          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
-          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' gnome/Cargo.toml | head -1)
+          version=$(python3 -c 'import tomllib; from pathlib import Path; print(tomllib.loads(Path("gnome/Cargo.toml").read_text())["package"]["version"])')
           if [ "$TAG" != "v$version" ]; then
             echo "::error::Tag $TAG does not match GNOME package version $version"
             exit 1
           fi
-          if ! grep -Fq "## $TAG (" CHANGELOG.md; then
+          if ! grep -Fq "MARKETING_VERSION: \"$version\"" macos/App/project.yml ||
+            ! grep -Fq "SOURCE_VERSION: \"$version\"" macos/App/project.yml; then
+            echo "::error::Xcode source version does not match $TAG"
+            exit 1
+          fi
+          if ! grep -Fq "## ${TAG#v} (" website/content/changelog/_index.md; then
             echo "::error::Tag $TAG has no changelog entry"
             exit 1
           fi
+      - name: Require a green commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: macos/Scripts/check-commit-verdict.sh "$TAG"
+
+  preflight:
+    name: Require release credentials
+    needs: [notes, verify-source]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    environment: release
+    permissions: {}
+    outputs:
+      app_store: ${{ steps.check.outputs.app_store }}
+    steps:
       # A job cannot read secrets in its own `if`, so the release works out here which legs it can publish.
       # A tag that reaches only two of the three channels is a half-published release, so a missing credential stops
       # the run here rather than leaving the App Store behind without anyone noticing.
@@ -76,15 +140,6 @@ jobs:
             exit 1
           fi
           echo "app_store=true" >> "$GITHUB_OUTPUT"
-      # Continuous integration already ran the application tests against this commit, on every runtime rather than the
-      # two a release once repeated, so the release reads that verdict instead of spending another forty minutes to
-      # cover less.
-      - name: Require a green commit
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-        run: macos/Scripts/check-commit-verdict.sh "$TAG"
-
   gnome:
     name: GNOME download
     needs: preflight
@@ -117,10 +172,9 @@ jobs:
             target/quotaline-gnome-linux-x86_64.tar.gz
             target/quotaline-gnome-linux-x86_64.tar.gz.sha256
           if-no-files-found: error
-
   direct:
     name: Direct and Homebrew downloads
-    needs: [preflight, gnome]
+    needs: [preflight, gnome, notes]
     runs-on: macos-26
     timeout-minutes: 90
     environment: release
@@ -275,11 +329,10 @@ jobs:
             macos/dist/gnome/*.tar.gz
             macos/dist/gnome/*.sha256
             Casks/quotaline.rb
-      - name: Read release notes
-        run: |
-          awk -v tag="$TAG" '/^## / { if (found) exit; found = index($0, "## " tag " (") == 1; next } found { print }' \
-            ../CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
-          test -s "$RUNNER_TEMP/release-notes.md"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: github-release-notes
+          path: ${{ runner.temp }}
       - name: Publish GitHub release
         # the action uploads the assets and writes the notes in one step
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3 # zizmor: ignore[superfluous-actions]
@@ -360,7 +413,6 @@ jobs:
               gh pr edit "$branch" --add-label "skip news"
             fi
           fi
-
   app-store:
     name: Mac App Store upload
     needs: [preflight, direct]

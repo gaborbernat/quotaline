@@ -666,7 +666,7 @@ macos-stamp tag="":
 # Start a release: Prepare Release tags the commit and dispatches the build, the cask and the App Store upload
 [group('macos')]
 [working-directory('macos')]
-macos-release bump="patch":
+macos-release bump="auto":
     gh workflow run "Prepare Release" --field bump={{ bump }}
     @echo "Watch it with: gh run watch \$(gh run list --workflow 'Prepare Release' --limit 1 --json databaseId -q '.[0].databaseId')"
 

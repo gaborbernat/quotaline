@@ -1,0 +1,18 @@
+name: Label bot news
+on:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] No PR code is checked out.
+    types: [opened, reopened, synchronize]
+permissions: {}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  label:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    steps:
+      - uses: tox-dev/github-workflows/label-bot-news@296388849cced16665b3e8b4397a22265418d3dc

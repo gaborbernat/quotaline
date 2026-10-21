@@ -4,12 +4,23 @@ description: Signing, notarization and distribution through Direct, Homebrew and
 weight: 7
 ---
 
-Add a nonempty `changelog.d/<PR>.feature.md`, `.bugfix.md`, or `.doc.md` entry for a user-facing pull request. Apply
-`skip news` for changes that need no release note; the label can be added after the pull request opens. Run **Prepare
-Release** (`just release patch|minor|major`, or the Actions tab) after merging the changes. It commits the entries to
-the [changelog](https://github.com/quotaline/quotaline/blob/main/CHANGELOG.md), runs the full CI matrix on that commit,
-and pushes `vX.Y.Z` only after CI passes. The repository-only release App pushes the tag, which starts **Release**. One
-run of **Release** publishes all three channels:
+Add one named fragment per user-facing change, such as `changelog.d/+codex-balance.feature.md`. Use `feature` for added
+or removed platform support, `bugfix` for corrected behavior, `doc` for reader-facing documentation, and `change` for a
+behavior change. The other supported categories are `breaking`, `security`, `performance`, `deprecation`, `removal`, and
+`packaging`. Write the outcome in the fragment; the release process links its squash PR and credits human authors. The
+[changelog](/changelog/) shows pending fragments under Draft on a pull request build.
+
+Apply `skip news` to a change with no end-user effect, including tooling-only work. The label can be added after opening
+the PR. Bot PRs receive it automatically unless they add a fragment. A bot-authored fragment is still checked and
+published without bot credit. Run **Prepare Release** (`just release`, or the Actions tab) after merging the changes. It
+derives the next `vX.Y.Z` tag from fragments, commits the changelog, runs full CI on that commit, and pushes the tag
+only after CI passes. `major`, `minor`, or `patch` can override the automatic bump; no version is typed into the form.
+
+Quotaline keeps the package version in its Rust manifests and Xcode project. Before preparing a release, keep these
+source versions in sync with the version implied by the fragments. The workflow checks the GNOME manifest before any
+write and stops if it differs. Because this repository has no tags yet, its first release uses the latest tracked
+changelog version, `0.1.7`, as the comparison baseline. The repository-only release App pushes the tag, which starts
+**Release**. One run of **Release** publishes all three channels:
 
 ```mermaid
 flowchart LR
@@ -33,9 +44,9 @@ Every job requires its credentials: the Direct job needs signing credentials and
 keys, and the release stops before any job runs when an App Store certificate or profile is missing, rather than
 publishing two channels of three.
 
-Versions 0.1.0 through 0.1.7 were published from the archived macOS repository. Pipeline configuration is not evidence
-that a release from this repository or an App Store listing exists. Check the repository's releases before declaring a
-build ready.
+Versions 0.1.0 through 0.1.7 were published from the archived macOS repository. The new repository has no tags or GitHub
+Releases for those versions. The first release here must be checked against the GNOME download, macOS downloads, cask
+PR, and App Store upload before considering the new pipeline complete.
 
 The release runs no application tests of its own. It reads the CI verdict for the tagged commit and refuses to publish
 unless the newest run passed, so a tag carries the full matrix of macOS 15, 26 and 27 rather than the two runtimes a

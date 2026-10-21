@@ -1,32 +1,164 @@
 name: Prepare Release
-
 on:
   workflow_dispatch:
     inputs:
       bump:
-        description: Which part of the version to raise
+        description: Version bump type
+        required: true
         type: choice
-        options: [patch, minor, major]
-        default: patch
-      version:
-        description: Exact version to release (1.2.3), overriding the bump
-        type: string
-        default: ""
-
-permissions:
-  contents: read
-
+        options: [auto, major, minor, patch]
+        default: auto
+permissions: {}
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
 jobs:
-  tag:
-    name: Tag the release
-    if: github.repository == 'quotaline/quotaline'
+  assemble:
+    if: github.repository == 'quotaline/quotaline' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      version: ${{ steps.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.15"
+          enable-cache: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: --locked
+          cache: false
+      - name: Create release-tool environment
+        run: uv venv --python 3.15 "$RUNNER_TEMP/release-tools"
+      - name: Install locked release tools
+        run: >-
+          uv pip sync --preview-features pylock --python "$RUNNER_TEMP/release-tools/bin/python" --group release pylock.toml
+      - name: Add release tools to PATH
+        run: echo "$RUNNER_TEMP/release-tools/bin" >>"$GITHUB_PATH"
+      - name: Select version from fragments
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          if [[ -n $(git tag --list 'v*') ]]; then
+            version=$(git tag --list | release-creator tags --next "$BUMP" --prefix v)
+          else
+            previous=$(awk '$1 == "##" { print "v" $2; exit }' website/content/changelog/_index.md)
+            test -n "$previous"
+            version=$(printf '%s\n' "$previous" | release-creator tags --next "$BUMP" --prefix v)
+          fi
+          printf 'version=%s\n' "$version" >>"$GITHUB_OUTPUT"
+      - name: Match source version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python - <<'PY'
+          import os
+          import tomllib
+          from pathlib import Path
+
+          expected = os.environ["VERSION"].removeprefix("v")
+          for manifest in Path.cwd().rglob("Cargo.toml"):
+              if "target" in manifest.parts:
+                  continue
+              actual = tomllib.loads(manifest.read_text()).get("package", {}).get("version")
+              if actual is not None and actual != expected:
+                  raise SystemExit(f"::error::{manifest} has version {actual}; expected {expected}")
+          project = Path("macos/App/project.yml").read_text().splitlines()
+          for field in ("MARKETING_VERSION", "SOURCE_VERSION"):
+              if f'    {field}: "{expected}"' not in project:
+                  raise SystemExit(f"::error::macos/App/project.yml needs {field}: {expected}")
+          PY
+      - id: prepare
+        uses: tox-dev/github-workflows/prepare-towncrier@296388849cced16665b3e8b4397a22265418d3dc
+        env:
+          SKIP: swift-format,swiftlint
+        with:
+          version: ${{ steps.version.outputs.version }}
+          changelog: website/content/changelog/_index.md
+          fragments: changelog.d
+          format: markdown
+          patch: ${{ runner.temp }}/release.patch
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-patch
+          path: ${{ runner.temp }}/release.patch
+          if-no-files-found: error
+  validate:
+    needs: assemble
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      patch-sha: ${{ steps.digest.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-patch
+          path: ${{ runner.temp }}/release-patch
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.15"
+          enable-cache: false
+      - name: Create release-tool environment
+        run: uv venv --python 3.15 "$RUNNER_TEMP/release-tools"
+      - name: Install locked release tools
+        run: >-
+          uv pip sync --preview-features pylock --python "$RUNNER_TEMP/release-tools/bin/python" --group release pylock.toml
+      - name: Add release tools to PATH
+        run: echo "$RUNNER_TEMP/release-tools/bin" >>"$GITHUB_PATH"
+      - uses: tox-dev/github-workflows/validate-release-patch@296388849cced16665b3e8b4397a22265418d3dc
+        with:
+          version: ${{ needs.assemble.outputs.version }}
+          changelog: website/content/changelog/_index.md
+          fragments: changelog.d
+          patch: ${{ runner.temp }}/release-patch/release.patch
+          expected-sha: ${{ github.sha }}
+      - name: Record validated patch digest
+        id: digest
+        run: |
+          read -r patch_sha _ < <(sha256sum "$RUNNER_TEMP/release-patch/release.patch")
+          echo "sha=$patch_sha" >>"$GITHUB_OUTPUT"
+  push:
+    needs: [assemble, validate]
     runs-on: ubuntu-26.04
     timeout-minutes: 120
     environment: release-auth
     permissions:
-      contents: read
       actions: write
+      contents: read
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-patch
+          path: ${{ runner.temp }}/release-patch
+      - uses: tox-dev/github-workflows/validate-release-patch@296388849cced16665b3e8b4397a22265418d3dc
+        with:
+          version: ${{ needs.assemble.outputs.version }}
+          changelog: website/content/changelog/_index.md
+          fragments: changelog.d
+          patch: ${{ runner.temp }}/release-patch/release.patch
+          expected-sha: ${{ github.sha }}
+          expected-patch-sha: ${{ needs.validate.outputs.patch-sha }}
+          checks: "false"
       - id: token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
@@ -35,88 +167,34 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          token: ${{ steps.token.outputs.token }}
-          persist-credentials: true # zizmor: ignore[artipacked] this job pushes main and its tag
-      - name: Work out the version
-        id: version
+      - name: Set App commit identity
         env:
-          BUMP: ${{ inputs.bump }}
-          EXPLICIT: ${{ inputs.version }}
-        run: |
-          git fetch origin main
-          git reset --hard origin/main
-          if [ -n "$EXPLICIT" ]; then
-            next="${EXPLICIT#v}"
-          else
-            current=$(git tag --list 'v*' --sort=-v:refname | head -1)
-            if [ -z "$current" ]; then
-              current=$(sed -n 's/^  version "\([^"]*\)"/\1/p' Casks/quotaline.rb)
-            fi
-            current="${current#v}"
-            current="${current:-0.0.0}"
-            IFS='.' read -r major minor patch <<< "$current"
-            case "$BUMP" in
-              major) next="$((major + 1)).0.0" ;;
-              minor) next="$major.$((minor + 1)).0" ;;
-              patch) next="$major.$minor.$((patch + 1))" ;;
-            esac
-          fi
-          source_version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' gnome/Cargo.toml | head -1)
-          if [ "$next" != "$source_version" ]; then
-            echo "::error::Tag v$next requires GNOME package version $next; source has $source_version"
-            exit 1
-          fi
-          echo "next=$next" >> "$GITHUB_OUTPUT"
-          echo "Releasing $next"
-      - name: Commit release notes
-        env:
-          NEXT: ${{ steps.version.outputs.next }}
           GH_TOKEN: ${{ steps.token.outputs.token }}
           APP_SLUG: ${{ steps.token.outputs.app-slug }}
         run: |
-          set -euo pipefail
-          if git rev-parse "v$NEXT" >/dev/null 2>&1; then
-            echo "::error::v$NEXT already exists"
-            exit 1
-          fi
-          mapfile -d '' fragments < <(find changelog.d -maxdepth 1 -type f -name '*.md' -print0 | sort -z)
-          if (( ${#fragments[@]} > 0 )); then
-            for fragment in "${fragments[@]}"; do
-              if [[ ! "$fragment" =~ ^changelog\.d/[0-9]+\.(feature|bugfix|doc)\.md$ || ! -s "$fragment" ]]; then
-                echo "::error::invalid or empty news fragment: $fragment"
-                exit 1
-              fi
-            done
-            {
-              printf '# Changelog\n\n## v%s (%s)\n\n' "$NEXT" "$(date -u +%F)"
-              for fragment in "${fragments[@]}"; do
-                cat "$fragment"
-                printf '\n\n'
-              done
-              tail -n +3 CHANGELOG.md
-            } > "$RUNNER_TEMP/changelog.md"
-            mv "$RUNNER_TEMP/changelog.md" CHANGELOG.md
-            git rm -- "${fragments[@]}"
-            app_user_id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
-            git config user.name "${APP_SLUG}[bot]"
-            git config user.email "${app_user_id}+${APP_SLUG}[bot]@users.noreply.github.com"
-            git add CHANGELOG.md changelog.d
-            git commit -m "Prepare v$NEXT"
-            git push origin HEAD:main
-          elif ! grep -Fq "## v$NEXT (" CHANGELOG.md; then
-            echo "::error::no news fragments to release"
-            exit 1
-          fi
-      - name: Require full CI on the release commit
+          app_user_id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${app_user_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+      - name: Commit release changelog
+        env:
+          VERSION: ${{ needs.assemble.outputs.version }}
+        run: git commit -m "Prepare $VERSION"
+      - name: Push release commit
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          gh auth setup-git --hostname github.com --force
+          git push origin HEAD:main
+      - name: Run full CI on release commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --ref main
+      - name: Require full CI on release commit
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           sha=$(git rev-parse HEAD)
-          gh workflow run ci.yml --ref main
           for (( attempt=0; attempt<24; attempt++ )); do
             run_id=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
               -f head_sha="$sha" -f event=workflow_dispatch -f per_page=10 --jq '.workflow_runs[0].id // empty')
@@ -128,20 +206,19 @@ jobs:
           done
           echo "::error::full CI run did not appear for $sha"
           exit 1
-      - name: Push the version tag
-        env:
-          NEXT: ${{ steps.version.outputs.next }}
+      - name: Verify release branch did not move
         run: |
           git fetch origin main
-          if [[ "$(git rev-parse origin/main)" != "$(git rev-parse HEAD)" ]]; then
-            echo "::error::main moved after release CI"
+          if [[ $(git rev-parse origin/main) != "$(git rev-parse HEAD)" ]]; then
+            echo '::error::main moved after release CI'
             exit 1
           fi
-          git tag -a "v$NEXT" -m "Release $NEXT"
-          git push origin "v$NEXT"
-      - name: Say what happens next
+      - name: Create annotated tag
         env:
-          NEXT: ${{ steps.version.outputs.next }}
-        run: |
-          echo "Tagged v$NEXT. Release builds GNOME and macOS downloads, the cask and the App Store upload." \
-            >> "$GITHUB_STEP_SUMMARY"
+          VERSION: ${{ needs.assemble.outputs.version }}
+        run: git tag -a "$VERSION" -m "Release $VERSION"
+      - name: Push release tag
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          VERSION: ${{ needs.assemble.outputs.version }}
+        run: git push origin "refs/tags/$VERSION"

@@ -765,6 +765,28 @@ size = 9979
 sha256 = "84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"
 
 [[packages]]
+name = "packaging"
+version = "26.3"
+index = "https://pypi.org/simple"
+marker = "\"release\" in dependency_groups"
+
+[packages.sdist]
+url = "https://files.pythonhosted.org/packages/7d/fa/3944b40b07da9ce895c0e6303a5ab7d53da063554f534556b134a54d6093/packaging-26.3.tar.gz"
+upload-time = 2026-08-04 18:15:28+00:00
+size = 313412
+
+[packages.sdist.hashes]
+sha256 = "94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79"
+
+[[packages.wheels]]
+url = "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl"
+upload-time = 2026-08-04 18:15:27+00:00
+size = 129956
+
+[packages.wheels.hashes]
+sha256 = "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
+
+[[packages]]
 name = "prek"
 version = "0.5.7"
 index = "https://pypi.org/simple"
@@ -851,15 +873,29 @@ size = 5626111
 sha256 = "239ccb081e3766d83a6a9a5ebee1d5cbb7986fc8e4f230e785423d409cff95e3"
 
 [[packages]]
+name = "pyyaml"
+version = "6.0.3"
+index = "https://pypi.org/simple"
+marker = "\"release\" in dependency_groups"
+
+[packages.sdist]
+url = "https://files.pythonhosted.org/packages/05/8e/961c0007c59b8dd7729d542c61a4d537767a59645b82a0b521206e1e25c2/pyyaml-6.0.3.tar.gz"
+upload-time = 2025-09-25 21:33:16+00:00
+size = 130960
+
+[packages.sdist.hashes]
+sha256 = "d76623373421df22fb4cf8817020cbb7ef15c725b9d5e45f17e189bfc384190f"
+
+[[packages]]
 name = "release-creator"
-version = "0.4.2.dev25+g5ab332349"
+version = "0.4.2.dev33+gc2ecc819e"
 marker = "\"release\" in dependency_groups"
 
 [packages.vcs]
 type = "git"
 url = "https://github.com/tox-dev/release-creator"
-requested-revision = "5ab33234939cf2969d25a11ba477c31eb264067c"
-commit-id = "5ab33234939cf2969d25a11ba477c31eb264067c"
+requested-revision = "c2ecc819ed0d8c40fdafd086ec267c751625dab2"
+commit-id = "c2ecc819ed0d8c40fdafd086ec267c751625dab2"
 
 [[packages]]
 name = "ruamel-yaml"

@@ -41,8 +41,9 @@ jobs:
           install_args: --locked
           cache: false
       - name: Install locked release tools
-        uses: tox-dev/github-workflows/install-locked-tools@33db207c963ad07b8d2bff4099143593fd4100b2
+        uses: tox-dev/github-workflows/install-locked-tools@fcba1cc52c8e8bbb8c3305ee5e4bc454b9ab0c50
         with:
+          groups: release-prepare
           venv: ${{ runner.temp }}/release-tools
       - name: Add release tools to PATH
         run: echo "$RUNNER_TEMP/release-tools/bin" >> "$GITHUB_PATH"
@@ -82,7 +83,7 @@ jobs:
                   raise SystemExit(f"::error::macos/App/project.yml needs {field}: {expected}")
           PY
       - id: prepare
-        uses: tox-dev/github-workflows/prepare-towncrier@33db207c963ad07b8d2bff4099143593fd4100b2
+        uses: tox-dev/github-workflows/prepare-towncrier@fcba1cc52c8e8bbb8c3305ee5e4bc454b9ab0c50
         env:
           SKIP: swift-format,swiftlint
         with:
@@ -128,12 +129,13 @@ jobs:
           install_args: --locked
           cache: false
       - name: Install locked release tools
-        uses: tox-dev/github-workflows/install-locked-tools@33db207c963ad07b8d2bff4099143593fd4100b2
+        uses: tox-dev/github-workflows/install-locked-tools@fcba1cc52c8e8bbb8c3305ee5e4bc454b9ab0c50
         with:
+          groups: release-validate
           venv: ${{ runner.temp }}/release-tools
       - name: Add release tools to PATH
         run: echo "$RUNNER_TEMP/release-tools/bin" >> "$GITHUB_PATH"
-      - uses: tox-dev/github-workflows/validate-release-patch@33db207c963ad07b8d2bff4099143593fd4100b2
+      - uses: tox-dev/github-workflows/validate-release-patch@fcba1cc52c8e8bbb8c3305ee5e4bc454b9ab0c50
         env:
           SKIP: swift-format,swiftlint
         with:
@@ -164,7 +166,7 @@ jobs:
         with:
           name: release-patch
           path: ${{ runner.temp }}/release-patch
-      - uses: tox-dev/github-workflows/validate-release-patch@33db207c963ad07b8d2bff4099143593fd4100b2
+      - uses: tox-dev/github-workflows/validate-release-patch@fcba1cc52c8e8bbb8c3305ee5e4bc454b9ab0c50
         with:
           version: ${{ needs.assemble.outputs.version }}
           changelog: website/content/changelog/_index.md

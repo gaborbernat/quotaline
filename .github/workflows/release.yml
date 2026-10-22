@@ -36,11 +36,10 @@ jobs:
           version: latest-known
           python-version: "3.15"
           enable-cache: false
-      - name: Create release-tool environment
-        run: uv venv --python 3.15 "$RUNNER_TEMP/release-tools"
       - name: Install locked release tools
-        run: >-
-          uv pip sync --preview-features pylock --python "$RUNNER_TEMP/release-tools/bin/python" --group release pylock.toml
+        uses: tox-dev/github-workflows/install-locked-tools@24e7c78489b6e2adb7b8f881761a5c2dbfe03fee
+        with:
+          venv: ${{ runner.temp }}/release-tools
       - name: Add release tools to PATH
         run: echo "$RUNNER_TEMP/release-tools/bin" >> "$GITHUB_PATH"
       - name: Find preceding tag
@@ -91,18 +90,17 @@ jobs:
           version: latest-known
           python-version: "3.15"
           enable-cache: false
-      - name: Create release-tool environment
-        run: uv venv --python 3.15 "$RUNNER_TEMP/release-tools"
       - name: Install locked release tools
-        run: >-
-          uv pip sync --preview-features pylock --python "$RUNNER_TEMP/release-tools/bin/python" --group release pylock.toml
+        uses: tox-dev/github-workflows/install-locked-tools@24e7c78489b6e2adb7b8f881761a5c2dbfe03fee
+        with:
+          venv: ${{ runner.temp }}/release-tools
       - name: Add release tools to PATH
         run: echo "$RUNNER_TEMP/release-tools/bin" >> "$GITHUB_PATH"
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: generated-notes
           path: ${{ runner.temp }}
-      - uses: tox-dev/github-workflows/render-release-notes@2b4ed19340a7ec97020f4fd0a403531845c49356
+      - uses: tox-dev/github-workflows/render-release-notes@24e7c78489b6e2adb7b8f881761a5c2dbfe03fee
         with:
           tag: ${{ env.TAG }}
           changelog: website/content/changelog/_index.md
@@ -162,7 +160,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
         run: macos/Scripts/check-commit-verdict.sh "$TAG"
-
   preflight:
     name: Require App Store credentials
     needs: verify-source
@@ -419,7 +416,7 @@ jobs:
             Casks/quotaline.rb \
             "$RUNNER_TEMP/release-assets/"
       - name: Publish GitHub release
-        uses: tox-dev/github-workflows/publish-github-release@2b4ed19340a7ec97020f4fd0a403531845c49356
+        uses: tox-dev/github-workflows/publish-github-release@24e7c78489b6e2adb7b8f881761a5c2dbfe03fee
         env:
           GH_TOKEN: ${{ github.token }}
         with:

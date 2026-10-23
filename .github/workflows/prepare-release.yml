@@ -42,7 +42,7 @@ jobs:
           install_args: --locked
           cache: false
       - name: Install locked release tools
-        uses: tox-dev/github-workflows/install-locked-tools@cadf58a0dcc5d0c7853b248ab7c2b19bb93675d1
+        uses: tox-dev/github-workflows/install-locked-tools@1b7d58c3e744b505215e1cb11697a80737b0e94d
         with:
           groups: release-prepare
           venv: ${{ runner.temp }}/release-tools
@@ -84,7 +84,7 @@ jobs:
                   raise SystemExit(f"::error::macos/App/project.yml needs {field}: {expected}")
           PY
       - id: prepare
-        uses: tox-dev/github-workflows/prepare-towncrier@cadf58a0dcc5d0c7853b248ab7c2b19bb93675d1
+        uses: tox-dev/github-workflows/prepare-towncrier@1b7d58c3e744b505215e1cb11697a80737b0e94d
         env:
           SKIP: swift-format,swiftlint
         with:
@@ -124,13 +124,13 @@ jobs:
           install_args: --locked
           cache: false
       - name: Install locked release tools
-        uses: tox-dev/github-workflows/install-locked-tools@cadf58a0dcc5d0c7853b248ab7c2b19bb93675d1
+        uses: tox-dev/github-workflows/install-locked-tools@1b7d58c3e744b505215e1cb11697a80737b0e94d
         with:
           groups: release-validate
           venv: ${{ runner.temp }}/release-tools
       - name: Add release tools to PATH
         run: echo "$RUNNER_TEMP/release-tools/bin" >> "$GITHUB_PATH"
-      - uses: tox-dev/github-workflows/validate-release-patch@cadf58a0dcc5d0c7853b248ab7c2b19bb93675d1
+      - uses: tox-dev/github-workflows/validate-release-patch@1b7d58c3e744b505215e1cb11697a80737b0e94d
         env:
           SKIP: swift-format,swiftlint
         with:
@@ -153,7 +153,7 @@ jobs:
         with:
           artifact-ids: ${{ needs.assemble.outputs.artifact-id }}
           path: ${{ runner.temp }}/release-patch
-      - uses: tox-dev/github-workflows/validate-release-patch@cadf58a0dcc5d0c7853b248ab7c2b19bb93675d1
+      - uses: tox-dev/github-workflows/validate-release-patch@1b7d58c3e744b505215e1cb11697a80737b0e94d
         with:
           version: ${{ needs.assemble.outputs.version }}
           patch: ${{ runner.temp }}/release-patch/release.patch

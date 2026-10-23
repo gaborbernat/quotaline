@@ -73,7 +73,7 @@ jobs:
           if-no-files-found: error
   notes:
     name: Render GitHub Release notes
-    needs: contributor-metadata
+    needs: [contributor-metadata, previous-tag]
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
@@ -101,6 +101,7 @@ jobs:
       - uses: tox-dev/github-workflows/render-release-notes@1b7d58c3e744b505215e1cb11697a80737b0e94d
         with:
           tag: ${{ env.TAG }}
+          previous: ${{ needs.previous-tag.outputs.tag }}
           changelog: website/content/changelog/_index.md
           artifact-url: https://github.com/${{ github.repository }}/releases/tag/${{ env.TAG }}
           artifact-label: Downloads

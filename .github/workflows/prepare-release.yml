@@ -46,8 +46,6 @@ jobs:
         with:
           groups: release-prepare
           venv: ${{ runner.temp }}/release-tools
-      - name: Add release tools to PATH
-        run: echo "$RUNNER_TEMP/release-tools/bin" >> "$GITHUB_PATH"
       - name: Select version from fragments
         id: version
         env:
@@ -128,8 +126,6 @@ jobs:
         with:
           groups: release-validate
           venv: ${{ runner.temp }}/release-tools
-      - name: Add release tools to PATH
-        run: echo "$RUNNER_TEMP/release-tools/bin" >> "$GITHUB_PATH"
       - uses: tox-dev/github-workflows/validate-release-patch@1b7d58c3e744b505215e1cb11697a80737b0e94d
         env:
           SKIP: swift-format,swiftlint

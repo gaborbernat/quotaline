@@ -18,36 +18,55 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 60
     permissions:
+      actions: read
       contents: read
       pull-requests: read
     outputs:
-      version: ${{ steps.prepare.outputs.version }}
-      artifact-id: ${{ steps.patch.outputs.artifact-id }}
+      version: ${{ steps.existing.outputs.version || steps.prepare.outputs.version }}
+      artifact-id: ${{ steps.existing.outputs.artifact-id || steps.patch.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Reuse this run's release patch
+        id: existing
+        if: github.run_attempt > 1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          artifact_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
+            --jq '[.artifacts[] | select(.name == "release-patch" and .expired == false) | .id] | first // empty')
+          if [[ -n "$artifact_id" ]]; then
+            version=$(python3 -c 'import tomllib; from pathlib import Path; print("v" + tomllib.loads(Path("gnome/Cargo.toml").read_text())["package"]["version"])')
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "artifact-id=$artifact_id" >> "$GITHUB_OUTPUT"
+          fi
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        if: steps.existing.outputs.artifact-id == ''
         with:
           version: latest-known
           python-version: "3.15"
           enable-cache: false
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        if: steps.existing.outputs.artifact-id == ''
         with:
           cache: false
       - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        if: steps.existing.outputs.artifact-id == ''
         with:
           version: 2026.10.11
           install_args: --locked
           cache: false
       - name: Install locked release tools
-        uses: tox-dev/github-workflows/install-locked-tools@e2d5e308194a31710039f3237b7157431c0e38b5 # v2.0.0
+        if: steps.existing.outputs.artifact-id == ''
+        uses: tox-dev/github-workflows/install-locked-tools@55f51f9b5cc0b40f280155a95de2d4f0ecbf7be1 # v3.0.0
         with:
           groups: release-prepare
           venv: ${{ runner.temp }}/release-tools
       - name: Select version from fragments
         id: version
+        if: steps.existing.outputs.artifact-id == ''
         env:
           BUMP: ${{ inputs.bump }}
         run: |
@@ -61,6 +80,7 @@ jobs:
           fi
           printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
       - name: Match source version
+        if: steps.existing.outputs.artifact-id == ''
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -82,12 +102,14 @@ jobs:
                   raise SystemExit(f"::error::macos/App/project.yml needs {field}: {expected}")
           PY
       - id: prepare
-        uses: tox-dev/github-workflows/prepare-towncrier@e2d5e308194a31710039f3237b7157431c0e38b5 # v2.0.0
+        if: steps.existing.outputs.artifact-id == ''
+        uses: tox-dev/github-workflows/prepare-towncrier@55f51f9b5cc0b40f280155a95de2d4f0ecbf7be1 # v3.0.0
         env:
           SKIP: swift-format,swiftlint
         with:
           version: ${{ steps.version.outputs.version }}
       - id: patch
+        if: steps.existing.outputs.artifact-id == ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-patch
@@ -122,11 +144,19 @@ jobs:
           install_args: --locked
           cache: false
       - name: Install locked release tools
-        uses: tox-dev/github-workflows/install-locked-tools@e2d5e308194a31710039f3237b7157431c0e38b5 # v2.0.0
+        uses: tox-dev/github-workflows/install-locked-tools@55f51f9b5cc0b40f280155a95de2d4f0ecbf7be1 # v3.0.0
         with:
           groups: release-validate
           venv: ${{ runner.temp }}/release-tools
-      - uses: tox-dev/github-workflows/validate-release-patch@e2d5e308194a31710039f3237b7157431c0e38b5 # v2.0.0
+      - name: Inspect remote release commit
+        id: remote
+        run: |
+          git fetch origin main
+          if [[ $(git rev-parse origin/main) != "$GITHUB_SHA" ]]; then
+            echo 'published-commit=true' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: tox-dev/github-workflows/validate-release-patch@55f51f9b5cc0b40f280155a95de2d4f0ecbf7be1 # v3.0.0
+        if: steps.remote.outputs.published-commit == ''
         env:
           SKIP: swift-format,swiftlint
         with:
@@ -149,11 +179,54 @@ jobs:
         with:
           artifact-ids: ${{ needs.assemble.outputs.artifact-id }}
           path: ${{ runner.temp }}/release-patch
-      - uses: tox-dev/github-workflows/validate-release-patch@e2d5e308194a31710039f3237b7157431c0e38b5 # v2.0.0
+      - name: Inspect remote release commit
+        id: remote
+        env:
+          VERSION: ${{ needs.assemble.outputs.version }}
+        run: |
+          git fetch origin main
+          remote=$(git rev-parse origin/main)
+          if [[ "$remote" != "$GITHUB_SHA" ]]; then
+            if [[ $(git rev-list --parents -n 1 "$remote") != "$remote $GITHUB_SHA" ]]; then
+              echo '::error::main moved beyond the prepared release commit' >&2
+              exit 1
+            fi
+            git apply --index "$RUNNER_TEMP/release-patch/release.patch"
+            if [[ $(git write-tree) != "$(git rev-parse "$remote^{tree}")" || \
+              $(git log -1 --format=%s "$remote") != "Prepare $VERSION" ]]; then
+              echo '::error::main does not contain the validated release patch' >&2
+              exit 1
+            fi
+            if ! grep -Fq "## ${VERSION#v} (" website/content/changelog/_index.md; then
+              echo "::error::release patch has no $VERSION changelog entry" >&2
+              exit 1
+            fi
+            ref="refs/tags/$VERSION"
+            tags=$(git ls-remote origin "$ref" "$ref^{}")
+            if [[ -n "$tags" && $(awk -v name="$ref^{}" '$2 == name { print $1 }' <<< "$tags") != "$remote" ]]; then
+              echo "::error::$ref does not point to the prepared release commit" >&2
+              exit 1
+            fi
+            echo "published-commit=$remote" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: tox-dev/github-workflows/validate-release-patch@55f51f9b5cc0b40f280155a95de2d4f0ecbf7be1 # v3.0.0
+        if: steps.remote.outputs.published-commit == ''
         with:
           version: ${{ needs.assemble.outputs.version }}
           patch: ${{ runner.temp }}/release-patch/release.patch
           checks: "false"
+      - name: Reuse prepared release commit
+        if: steps.remote.outputs.published-commit != ''
+        env:
+          PUBLISHED_COMMIT: ${{ steps.remote.outputs.published-commit }}
+        run: |
+          git fetch origin main
+          if [[ $(git rev-parse origin/main) != "$PUBLISHED_COMMIT" ]]; then
+            echo '::error::main moved after release validation' >&2
+            exit 1
+          fi
+          git reset --hard "$GITHUB_SHA"
+          git switch --detach "$PUBLISHED_COMMIT"
       - id: token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
@@ -170,16 +243,28 @@ jobs:
           app_user_id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
           git config user.name "${APP_SLUG}[bot]"
           git config user.email "${app_user_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+      - name: Configure App git credentials
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: gh auth setup-git --hostname github.com --force
       - name: Commit release changelog
+        if: steps.remote.outputs.published-commit == ''
         env:
           VERSION: ${{ needs.assemble.outputs.version }}
         run: git commit -m "Prepare $VERSION"
       - name: Push release commit
+        if: steps.remote.outputs.published-commit == ''
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: git push origin HEAD:refs/heads/main
+      - name: Verify remote release commit
         run: |
-          gh auth setup-git --hostname github.com --force
-          git push origin HEAD:main
+          remote=$(git ls-remote origin refs/heads/main)
+          if [[ ${remote%%[[:space:]]*} != "$(git rev-parse HEAD)" ]]; then
+            echo '::error::main does not contain the prepared release commit' >&2
+            exit 1
+          fi
       - name: Run full CI on release commit
         env:
           GH_TOKEN: ${{ github.token }}
@@ -208,12 +293,38 @@ jobs:
             echo '::error::main moved after release CI'
             exit 1
           fi
+      - name: Inspect remote release tag
+        id: remote-tag
+        env:
+          VERSION: ${{ needs.assemble.outputs.version }}
+        run: |
+          remote=$(git ls-remote origin "refs/tags/$VERSION")
+          if [[ -n "$remote" ]]; then
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          fi
       - name: Create annotated tag
+        if: steps.remote-tag.outputs.exists == 'false'
         env:
           VERSION: ${{ needs.assemble.outputs.version }}
         run: git tag -a "$VERSION" -m "Release $VERSION"
       - name: Push release tag
+        if: steps.remote-tag.outputs.exists == 'false'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           VERSION: ${{ needs.assemble.outputs.version }}
         run: git push origin "refs/tags/$VERSION"
+      - name: Verify remote release tag
+        env:
+          VERSION: ${{ needs.assemble.outputs.version }}
+        run: |
+          ref="refs/tags/$VERSION"
+          remote=$(git ls-remote origin "$ref" "$ref^{}")
+          tag=$(awk -v name="$ref" '$2 == name { print $1 }' <<< "$remote")
+          peeled=$(awk -v name="$ref^{}" '$2 == name { print $1 }' <<< "$remote")
+          if [[ -z "$tag" || "$peeled" != "$(git rev-parse HEAD)" ]]; then
+            echo "::error::$ref was not published at the validated commit"
+            exit 1
+          fi

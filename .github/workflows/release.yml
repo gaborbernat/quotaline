@@ -7,6 +7,11 @@ on:
       tag:
         description: Existing tag to build (v1.2.3)
         required: true
+      app_store_reconciled:
+        description: App Store Connect checked for this version; permit another upload
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -19,6 +24,7 @@ jobs:
   previous-tag:
     name: Find preceding tag
     if: github.repository == 'quotaline/quotaline'
+    needs: verify-source
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
@@ -28,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ needs.verify-source.outputs.commit }}
           fetch-depth: 0
           persist-credentials: false
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
@@ -37,13 +43,13 @@ jobs:
           python-version: "3.15"
           enable-cache: false
       - name: Install locked release tools
-        uses: tox-dev/github-workflows/install-locked-tools@e2d5e308194a31710039f3237b7157431c0e38b5 # v2.0.0
+        uses: tox-dev/github-workflows/install-locked-tools@55f51f9b5cc0b40f280155a95de2d4f0ecbf7be1 # v3.0.0
         with:
           groups: release-notes
           venv: ${{ runner.temp }}/release-tools
       - name: Find preceding tag
         id: previous
-        uses: tox-dev/github-workflows/select-previous-tag@e2d5e308194a31710039f3237b7157431c0e38b5 # v2.0.0
+        uses: tox-dev/github-workflows/select-previous-tag@55f51f9b5cc0b40f280155a95de2d4f0ecbf7be1 # v3.0.0
         with:
           tag: ${{ env.TAG }}
   contributor-metadata:
@@ -59,13 +65,27 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PREVIOUS: ${{ needs.previous-tag.outputs.tag }}
+          SOURCE_COMMIT: ${{ needs.verify-source.outputs.commit }}
         run: |
+          verify_tag() {
+            refs=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$TAG" "refs/tags/$TAG^{}")
+            resolved=$(awk -v name="refs/tags/$TAG^{}" '$2 == name { print $1 }' <<< "$refs")
+            if [[ -z "$resolved" ]]; then
+              resolved=$(awk -v name="refs/tags/$TAG" '$2 == name { print $1 }' <<< "$refs")
+            fi
+            if [[ "$resolved" != "$SOURCE_COMMIT" ]]; then
+              echo "::error::$TAG moved after source verification" >&2
+              exit 1
+            fi
+          }
+          verify_tag
           args=(-f "tag_name=$TAG")
           if [[ -n "$PREVIOUS" ]]; then
             args+=(-f "previous_tag_name=$PREVIOUS")
           fi
           gh api -X POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" "${args[@]}" --jq .body \
             > "$RUNNER_TEMP/generated-notes.md"
+          verify_tag
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: generated-notes
@@ -73,7 +93,7 @@ jobs:
           if-no-files-found: error
   notes:
     name: Render GitHub Release notes
-    needs: [contributor-metadata, previous-tag]
+    needs: [contributor-metadata, previous-tag, verify-source]
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
@@ -81,7 +101,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ needs.verify-source.outputs.commit }}
           fetch-depth: 0
           persist-credentials: false
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
@@ -90,7 +110,7 @@ jobs:
           python-version: "3.15"
           enable-cache: false
       - name: Install locked release tools
-        uses: tox-dev/github-workflows/install-locked-tools@e2d5e308194a31710039f3237b7157431c0e38b5 # v2.0.0
+        uses: tox-dev/github-workflows/install-locked-tools@55f51f9b5cc0b40f280155a95de2d4f0ecbf7be1 # v3.0.0
         with:
           groups: release-notes
           venv: ${{ runner.temp }}/release-tools
@@ -98,7 +118,7 @@ jobs:
         with:
           name: generated-notes
           path: ${{ runner.temp }}
-      - uses: tox-dev/github-workflows/render-release-notes@e2d5e308194a31710039f3237b7157431c0e38b5 # v2.0.0
+      - uses: tox-dev/github-workflows/render-release-notes@55f51f9b5cc0b40f280155a95de2d4f0ecbf7be1 # v3.0.0
         with:
           tag: ${{ env.TAG }}
           previous: ${{ needs.previous-tag.outputs.tag }}
@@ -116,7 +136,7 @@ jobs:
     name: Verify tagged source
     if: github.repository == 'quotaline/quotaline'
     runs-on: ubuntu-26.04
-    timeout-minutes: 20
+    timeout-minutes: 45
     permissions:
       actions: read
       contents: read
@@ -153,6 +173,36 @@ jobs:
             echo "::error::Tag $TAG has no changelog entry"
             exit 1
           fi
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: latest-known
+          python-version: "3.15"
+          enable-cache: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.11
+          install_args: --locked
+          cache: false
+      - name: Install locked source-check tools
+        uses: tox-dev/github-workflows/install-locked-tools@55f51f9b5cc0b40f280155a95de2d4f0ecbf7be1 # v3.0.0
+        with:
+          groups: release-check
+          venv: ${{ runner.temp }}/release-tools
+      - uses: tox-dev/github-workflows/verify-frozen-hooks@55f51f9b5cc0b40f280155a95de2d4f0ecbf7be1 # v3.0.0
+      - name: Run cooled source hooks
+        env:
+          SKIP: swift-format,swiftlint
+          UV_EXCLUDE_NEWER: 7 days
+          UV_NO_CONFIG: "1"
+          UV_NO_SOURCES: "1"
+        run: |
+          unset UV_CONFIG_FILE UV_INDEX UV_INDEX_URL UV_DEFAULT_INDEX UV_EXTRA_INDEX_URL
+          unset UV_FIND_LINKS UV_EXCLUDE_NEWER_PACKAGE
+          unset UV_INSECURE_HOST UV_SYSTEM_CERTS SSL_CERT_FILE SSL_CERT_DIR
+          prek run --all-files
       - name: Require a green commit
         env:
           GH_TOKEN: ${{ github.token }}
@@ -200,7 +250,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ needs.verify-source.outputs.commit }}
           persist-credentials: false
       - name: Install extension packaging tools
         run: |
@@ -224,7 +274,7 @@ jobs:
           if-no-files-found: error
   direct:
     name: Direct and Homebrew downloads
-    needs: gnome
+    needs: [gnome, verify-source]
     runs-on: macos-26
     timeout-minutes: 90
     environment: release
@@ -236,7 +286,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ needs.verify-source.outputs.commit }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
@@ -414,7 +464,7 @@ jobs:
             Casks/quotaline.rb \
             "$RUNNER_TEMP/release-assets/"
       - name: Publish GitHub release
-        uses: tox-dev/github-workflows/publish-github-release@e2d5e308194a31710039f3237b7157431c0e38b5 # v2.0.0
+        uses: tox-dev/github-workflows/publish-github-release@55f51f9b5cc0b40f280155a95de2d4f0ecbf7be1 # v3.0.0
         env:
           GH_TOKEN: ${{ github.token }}
         with:
@@ -472,16 +522,23 @@ jobs:
             else
               git push origin "HEAD:refs/heads/$branch"
             fi
-            if ! gh pr list --head "$branch" --state open --json number --jq 'length > 0' | grep -Fx true; then
+            owner=${GITHUB_REPOSITORY%%/*}
+            gh api -X GET "repos/$GITHUB_REPOSITORY/pulls" -f state=open -f head="$owner:$branch" \
+              >"$RUNNER_TEMP/cask-pulls.json"
+            existing_pr=$(jq -er --arg repository "$GITHUB_REPOSITORY" --arg branch "$branch" '
+              [.[] | select(.head.repo.full_name == $repository and .head.ref == $branch and .base.ref == "main")] |
+              if length == 0 then "" elif length == 1 then (.[0].number | tostring) else error("multiple cask PRs") end
+            ' "$RUNNER_TEMP/cask-pulls.json")
+            if [[ -z "$existing_pr" ]]; then
               gh pr create --base main --head "$branch" --title "Update Homebrew cask for ${TAG}" \
                 --body "Publish the ${TAG} Homebrew package checksum." --label "skip news"
             else
-              gh pr edit "$branch" --add-label "skip news"
+              gh pr edit "$existing_pr" --add-label "skip news"
             fi
           fi
   app-store:
-    name: Mac App Store upload
-    needs: preflight
+    name: Mac App Store upload (${{ inputs.tag || github.ref_name }})
+    needs: [preflight, verify-source]
     runs-on: macos-26
     timeout-minutes: 90
     environment: release
@@ -489,12 +546,46 @@ jobs:
       run:
         working-directory: macos
     permissions:
+      actions: read
       contents: read
     if: needs.preflight.outputs.app_store == 'true'
     steps:
+      - name: Require App Store reconciliation before retry
+        if: github.run_attempt > 1 || (github.event_name == 'workflow_dispatch' && !inputs.app_store_reconciled)
+        working-directory: .
+        run: |
+          echo '::error::Check App Store Connect for this version, then dispatch Release with app_store_reconciled enabled'
+          exit 1
+      - name: Reject previous App Store upload attempt
+        if: github.event_name == 'push'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/workflows/release.yml/runs?per_page=100" \
+            > "$RUNNER_TEMP/release-runs.json"
+          jq -s -r --arg tag "$TAG" --argjson current "$GITHUB_RUN_ID" '
+            .[].workflow_runs[] |
+            select(.id != $current and (.head_branch == $tag or .head_branch == null or .event == "workflow_dispatch")) |
+            [.id, (.head_branch == $tag), (.event == "workflow_dispatch")] | @tsv
+          ' "$RUNNER_TEMP/release-runs.json" > "$RUNNER_TEMP/prior-release-runs"
+          while IFS=$'\t' read -r run_id tag_branch dispatched; do
+            gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?filter=all&per_page=100" \
+              > "$RUNNER_TEMP/prior-release-jobs.json"
+            attempts=$(jq -r --arg tag "$TAG" --argjson tag_branch "$tag_branch" --argjson dispatched "$dispatched" '
+              .jobs[] |
+              select(.name == "Mac App Store upload (\($tag))" or
+                (($tag_branch or $dispatched) and .name == "Mac App Store upload")) |
+              .steps[]? | select(.name == "Archive, export and upload" and .started_at != null) | .started_at
+            ' "$RUNNER_TEMP/prior-release-jobs.json")
+            if [[ -n "$attempts" ]]; then
+              echo "::error::App Store upload for $TAG was attempted in run $run_id; reconcile in App Store Connect first" >&2
+              exit 1
+            fi
+          done < "$RUNNER_TEMP/prior-release-runs"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ needs.verify-source.outputs.commit }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
@@ -535,6 +626,19 @@ jobs:
             > "$profiles/quotaline-widget.provisionprofile"
       - name: Generate project
         run: cd App && xcodegen generate
+      - name: Verify tag before App Store upload
+        env:
+          SOURCE_COMMIT: ${{ needs.verify-source.outputs.commit }}
+        run: |
+          refs=$(git ls-remote origin "refs/tags/$TAG" "refs/tags/$TAG^{}")
+          resolved=$(awk -v name="refs/tags/$TAG^{}" '$2 == name { print $1 }' <<< "$refs")
+          if [[ -z "$resolved" ]]; then
+            resolved=$(awk -v name="refs/tags/$TAG" '$2 == name { print $1 }' <<< "$refs")
+          fi
+          if [[ "$resolved" != "$SOURCE_COMMIT" ]]; then
+            echo "::error::$TAG moved after source verification" >&2
+            exit 1
+          fi
       - name: Archive, export and upload
         env:
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}

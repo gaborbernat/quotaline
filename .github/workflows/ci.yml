@@ -140,7 +140,7 @@ jobs:
         with:
           cache: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           install_args: --locked
@@ -172,7 +172,7 @@ jobs:
         with:
           cache: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           install_args: --locked
@@ -202,7 +202,7 @@ jobs:
         with:
           persist-credentials: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           install_args: --locked
@@ -238,7 +238,7 @@ jobs:
         with:
           cache: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           install_args: --locked
@@ -260,7 +260,7 @@ jobs:
         with:
           cache: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           install_args: --locked
@@ -300,7 +300,7 @@ jobs:
         with:
           cache: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           install_args: --locked
@@ -347,7 +347,7 @@ jobs:
         with:
           cache: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           install_args: --locked
@@ -394,7 +394,7 @@ jobs:
         with:
           persist-credentials: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           install_args: --locked
@@ -429,7 +429,7 @@ jobs:
         with:
           persist-credentials: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           install_args: --locked
@@ -464,7 +464,7 @@ jobs:
         with:
           cache: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           install_args: --locked
@@ -499,7 +499,7 @@ jobs:
         with:
           persist-credentials: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           working_directory: macos
@@ -519,7 +519,7 @@ jobs:
           key: macos-bindings-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.cache }}-${{ hashFiles('crates/**', 'macos/adapter/**', 'macos/platform/**', 'macos/uniffi.toml', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'mise.toml', 'mise.lock', 'justfile') }}
       - name: 🧰 Install mise tools
         if: steps.bindings.outputs.cache-hit != 'true'
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           working_directory: macos
@@ -568,7 +568,7 @@ jobs:
         with:
           persist-credentials: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           working_directory: macos
@@ -598,7 +598,7 @@ jobs:
         with:
           persist-credentials: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           working_directory: macos
@@ -680,7 +680,7 @@ jobs:
         with:
           persist-credentials: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           working_directory: macos
@@ -800,7 +800,7 @@ jobs:
         with:
           persist-credentials: false
       - name: 🧰 Install mise tools
-        uses: jdx/mise-action@v5.2.6
+        uses: jdx/mise-action@v5.2.7
         with:
           version: 2026.10.24
           working_directory: macos

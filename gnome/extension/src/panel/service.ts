@@ -1,6 +1,7 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import {closeInstantly, openInstantly} from '../menu-animation.js';
 import type {TokenPanel} from '../panel.js';
 import {quotaPresentation} from '../quota-presentation.js';
 import type {LogEntry, ModelGroup, PanelState, ReviewCounts, SpendReport} from '../service-state.js';
@@ -65,19 +66,20 @@ export const serviceMethods = {
         filename: string,
     ): Promise<void> {
         this._exportCancel?.();
-        try {
-            const path = await chooseExportPath(cancel => (this._exportCancel = cancel), filename);
-            if (path && this._enabled)
-                this._call(method, signature, [...values, path], () => {
-                    this._notice = `Exported ${path}`;
-                    this._renderPage();
-                });
-        } catch (error) {
-            if (this._enabled) {
-                this._notice = (error as Error).message;
-                this._renderPage();
-            }
+        // GJS rejects with GLib.Error for D-Bus failures, which is not an instance of Error.
+        const choice = await chooseExportPath(cancel => (this._exportCancel = cancel), filename).catch(
+            (error: unknown) => ({message: (error as {message: string}).message}),
+        );
+        if (!this._enabled || !choice) return;
+        if (typeof choice !== 'string') {
+            this._notice = choice.message;
+            this._renderPage();
+            return;
         }
+        this._call(method, signature, [...values, choice], () => {
+            this._notice = `Exported ${choice}`;
+            this._renderPage();
+        });
     },
 
     _logDiagnostic(this: TokenPanel, category: string, message: string): void {
@@ -113,7 +115,7 @@ export const serviceMethods = {
     },
 
     _requestQuit(this: TokenPanel): void {
-        this._indicator.menu.close(false);
+        closeInstantly(this._indicator.menu);
         if (this._quitPending) return;
         this._quitPending = true;
         global.stage.connectObject(
@@ -313,12 +315,12 @@ export const serviceMethods = {
                         () => {
                             Main.layoutManager.disconnectObject(this._indicator);
                             this._render();
-                            this._indicator.menu.open(false);
+                            openInstantly(this._indicator.menu);
                         },
                         this._indicator,
                     );
                 } else {
-                    this._indicator.menu.open(false);
+                    openInstantly(this._indicator.menu);
                 }
             }
             if (historyScopeChanged && this._tab === 'History') this._loadHistory();

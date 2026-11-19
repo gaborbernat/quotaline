@@ -11,6 +11,39 @@ Earlier macOS releases were published from the
 
 <!-- release notes -->
 
+<a name="release-0-3-0"></a>
+
+## 0.3.0 (2026-11-19)
+
+<a name="release-0-3-0-added"></a>
+
+### Added
+
+- Add a terminal dashboard for Linux, macOS and Windows. `quotaline-tui` collects quota itself, without a desktop app,
+  and shows grouped quota windows, history, settings and logs. Press `s` to sign in to a provider through its own
+  command-line tool. Each release ships a signed and notarized universal binary for macOS, and x86_64 builds for Linux
+  and Windows. Run `quotaline-tui --demo` to try sample readings ([#57](https://github.com/quotaline/quotaline/pull/57))
+  by [@gaborbernat](https://github.com/gaborbernat).
+
+<a name="release-0-3-0-changes"></a>
+
+### Changes
+
+- Read time zones from the operating system database through jiff, replacing the unmaintained chrono and chrono-tz
+  crates (RUSTSEC-2026-0543, RUSTSEC-2026-0555) ([#54](https://github.com/quotaline/quotaline/pull/54)) by
+  [@gaborbernat](https://github.com/gaborbernat).
+
+<a name="release-0-3-0-fixed"></a>
+
+### Fixed
+
+- Fix macOS tooltips on controls that highlight on hover: a tooltip sometimes never appeared, or disappeared while the
+  pointer stayed on the control ([#58](https://github.com/quotaline/quotaline/pull/58)) by
+  [@gaborbernat](https://github.com/gaborbernat).
+- Fix the GNOME Shell 51 panel: the Quick Settings snapshot menu now opens, and menus the extension opens itself no
+  longer play the slide-in animation ([#60](https://github.com/quotaline/quotaline/pull/60)) by
+  [@gaborbernat](https://github.com/gaborbernat).
+
 <a name="release-0-2-2"></a>
 
 ## 0.2.2 (2026-11-04)
